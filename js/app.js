@@ -1,7 +1,9 @@
-import { CONFIG } from "./config.js";
-import * as daily from "./daily.js";
+import { CONFIG } from "./config.js?v=5";
+import * as daily from "./daily.js?v=5";
 
 const $ = (id) => document.getElementById(id);
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=5").
+const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
 
 // ---------------------------------------------------------------- geometry
@@ -94,7 +96,7 @@ function freshState(ids) {
 function save() { store.set(gameKey(date), state); }
 
 async function boot() {
-  const data = await fetch("data/places.json").then((r) => r.json());
+  const data = await fetch("data/places.json" + V).then((r) => r.json());
   daily.initData(data);
   cities = daily.puzzleFor(date).map(daily.describeCity);
 
@@ -164,6 +166,19 @@ function initMap() {
   map.on("move", updateZoomCap);
 
   map.on("load", () => {
+    // Country outlines for revealed answers (under the guess lines).
+    map.addSource("borders", { type: "geojson", data: emptyFC() });
+    map.addLayer({ id: "borders-fill", type: "fill", source: "borders", paint: { "fill-color": "#fdf6c8", "fill-opacity": 0.14 } });
+    map.addLayer({
+      id: "borders-casing", type: "line", source: "borders",
+      layout: { "line-join": "round" },
+      paint: { "line-color": "#2b2840", "line-width": 4.5, "line-opacity": 0.45 },
+    });
+    map.addLayer({
+      id: "borders-line", type: "line", source: "borders",
+      layout: { "line-join": "round" },
+      paint: { "line-color": "#fdf6c8", "line-width": 2.2 },
+    });
     map.addSource("lines", { type: "geojson", lineMetrics: true, data: emptyFC() });
     map.addLayer({
       id: "lines-casing", type: "line", source: "lines",
@@ -182,6 +197,7 @@ function initMap() {
     updateZoomCap();
     map.setPadding(uiPadding());
     render(true);
+    setTimeout(loadAllBorders, 1500); // warm the outline cache before the first reveal
   });
 
   map.on("click", onMapTap);
@@ -274,6 +290,50 @@ function probeEl(text) {
 
 function addMarker(el, lngLat, anchor = "bottom") {
   return new maplibregl.Marker({ element: el, anchor }).setLngLat(lngLat).addTo(map);
+}
+
+// ---------------------------------------------------------------- country outlines
+
+// All outlines live in one file (keyed by country code), fetched once in the
+// background after the globe loads.
+let bordersPromise = null;
+function loadAllBorders() {
+  if (!bordersPromise) bordersPromise = fetch("data/borders.json" + V).then((r) => r.json()).catch(() => ({}));
+  return bordersPromise;
+}
+async function loadBorder(cc) {
+  const all = await loadAllBorders();
+  return { type: "FeatureCollection", features: all[cc] || [] };
+}
+
+let borderToken = 0;
+async function showBorders(ccs) {
+  const token = ++borderToken;
+  const fcs = await Promise.all(ccs.map(loadBorder));
+  if (token !== borderToken) return; // a newer request replaced this one
+  const src = map.getSource("borders");
+  if (src) src.setData({ type: "FeatureCollection", features: fcs.flatMap((fc) => fc.features) });
+}
+function clearBorders() { showBorders([]); }
+
+// Ray casting point-in-polygon on lng/lat rings.
+function inRing(pt, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function inCountry(pt, fc) {
+  for (const f of fc.features) {
+    const g = f.geometry;
+    const polys = g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : [];
+    for (const poly of polys) {
+      if (inRing(pt, poly[0]) && !poly.slice(1).some((hole) => inRing(pt, hole))) return true;
+    }
+  }
+  return false;
 }
 
 function clearMarkers() {
@@ -422,18 +482,26 @@ function render(initial) {
     markers.guess = addMarker(guessEl(), r.guess);
     markers.answer = addMarker(answerEl(c.name), cityLngLat(i), "center");
     setLines([[r.guess, cityLngLat(i)]]);
+    showBorders([c.cc]);
     const mid = greatCircle(r.guess, cityLngLat(i), 2)[1];
     showResult(r, i);
     renderActions(); // result card must be visible before measuring padding
     map.easeTo({ center: mid, zoom: zoomForSpan(Math.max(r.km * 1.6, 700)), padding: uiPadding(), duration: initial ? 0 : 1300 });
-  } else if (pendingGuess) {
-    markers.guess = addMarker(guessEl(), pendingGuess);
+  } else {
+    clearBorders();
+    if (pendingGuess) markers.guess = addMarker(guessEl(), pendingGuess);
   }
   renderActions();
 }
 
 function showResult(r, i) {
-  $("result-dist").textContent = r.km <= CONFIG.PERFECT_RADIUS_KM ? `Bullseye! ${fmtKm(r.km)}` : `${fmtKm(r.km)} away`;
+  const distText = r.km <= CONFIG.PERFECT_RADIUS_KM ? `Bullseye! ${fmtKm(r.km)}` : `${fmtKm(r.km)} away`;
+  $("result-dist").textContent = distText;
+  loadBorder(cities[i].cc).then((fc) => {
+    if (state.phase === "reveal" && state.round === i && inCountry(r.guess, fc)) {
+      $("result-dist").innerHTML = `${escapeHtml(distText)} <span class="badge">Right country</span>`;
+    }
+  });
   $("result-calc").textContent = `${r.base} × ${fmtMult(r.mult).slice(1)}${r.hint ? " (hint)" : ""}`;
   $("result-base").textContent = r.base;
   $("result-points").textContent = r.score;
@@ -533,6 +601,7 @@ function showAllResults(animate = true) {
     pairs.push([r.guess, cityLngLat(i)]);
   });
   setLines(pairs);
+  showBorders(cities.map((c) => c.cc));
   // Center the globe on the average position of the day's answers.
   let x = 0, y = 0, z = 0;
   for (let i = 0; i < R; i++) {
@@ -622,5 +691,5 @@ function wireUI() {
 boot().catch((err) => {
   console.error(err);
   const l = $("loading");
-  if (l) l.innerHTML = `<div style="text-align:center;font-size:16px;padding:20px">XenoTap failed to load.<br><small>${escapeHtml(String(err.message || err))}</small></div>`;
+  if (l) l.innerHTML = `<div style="text-align:center;font-size:16px;padding:20px">XenoTap failed to load.<br><small>${escapeHtml(String(err.message || err))}</small><br><br><button class="btn prism" onclick="location.reload()">Reload</button></div>`;
 });

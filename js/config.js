@@ -51,6 +51,8 @@ export const CONFIG = {
   CITY_POP_CAP: 3000000,
   TERRITORY_WEIGHT: 0.3,            // dependent territories vs 1.0 for countries
   MAX_PER_CONTINENT: 2,             // per day, keeps each day globally spread
+  MIN_SPACING_KM: 1000,             // any two places on the same day are at least this far apart
+  // Countries that share a land border never appear on the same day.
   COUNTRY_REPEAT_DAYS: 14,          // a country will not recur within this window
   CITY_REPEAT_DAYS: 60,             // a city will not recur within this window
 };

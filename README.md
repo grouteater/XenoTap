@@ -12,6 +12,8 @@ A daily geography game. Six places a day, one unlabeled satellite globe, tap whe
 6. Go to **Settings > Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main**, folder **/ (root)**, then **Save**.
 7. Wait a minute or two. Your game is live at `https://YOUR-USERNAME.github.io/xenotap/`.
 
+**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=5` with `?v=6`, and so on).
+
 To update later: on the repo page click **Add file > Upload files**, drag in the new contents of the folder, and commit. Files with the same name are replaced. Pages redeploys on its own within a minute or two. (For a one-line tweak you can also open the file on GitHub, click the pencil icon, edit, and commit.)
 
 ## Playing
@@ -69,7 +71,7 @@ Landing anywhere in the right country almost always scores well: most countries 
 | 4 | Moldova, Kyrgyzstan, DR Congo, Suriname, Vanuatu, Guernsey | 56 |
 | 5 | Senegal, Mali, Chad, Gabon, Comoros, Tuvalu, Wallis and Futuna | 33 |
 
-Rounds 1 to 6 draw from tiers 1, 2, 3, 3 or 4, 4, then 5 (`ROUND_TIERS` in `config.js`). Early rounds also lean toward bigger, better known cities, and late rounds toward smaller ones (`ROUND_POP_EXPONENT`). Dependent territories get 0.3 weight so tiny islands do not crowd out real countries. Each day has at most two places per continent. The same country will not come back within 14 days, and the same city will not come back within 60.
+Rounds 1 to 6 draw from tiers 1, 2, 3, 3 or 4, 4, then 5 (`ROUND_TIERS` in `config.js`). Early rounds also lean toward bigger, better known cities, and late rounds toward smaller ones (`ROUND_POP_EXPONENT`). Dependent territories get 0.3 weight so tiny islands do not crowd out real countries. Each day has at most two places per continent, no two countries that share a land border, and no two places closer than 1,000 km (`MIN_SPACING_KM`). The same country will not come back within 14 days, and the same city will not come back within 60.
 
 **Deterministic, with no history file.** The date string (Eastern time) is hashed into a seed for a small seeded random generator (mulberry32). To avoid repeats without storing anything, the game replays every day from `LAUNCH_DATE` up to the requested day in memory, which takes a fraction of a second even years out. That means any date, past or present, always produces the same six places on every device, and nothing can fall out of sync.
 
@@ -94,6 +96,8 @@ https://you.github.io/xenotap/
 
 **Hints.** One per round, and each one halves that round's multiplier: hemisphere (north or south, east or west), continent, or a distance check. For the distance check you tap one test spot and it tells you exactly how many km that spot is from the city.
 
+**Country outlines.** When a round is revealed, the answer country's border is drawn on the globe, and the result card says "Right country" if your guess landed inside it. The final "View globe" screen outlines all six countries. Outlines come from mledoze/countries, simplified to about 2 km detail (finer than the zoom cap can show), stored in `data/borders.json` and fetched in the background after the globe loads.
+
 **Answer marker.** The real location gets a red circle with big red arrows pointing at it, in the style of a YouTube clickbait thumbnail.
 
 ## Rebuilding the city data (optional)
@@ -102,8 +106,9 @@ Only needed if you change the population floor, per-country cap, or excluded cou
 
 ```
 cd tools
-npm install all-the-cities world-countries
+npm install all-the-cities world-countries mapshaper
 node build-data.mjs
+node build-borders.mjs
 ```
 
 ## Credits

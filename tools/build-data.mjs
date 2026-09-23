@@ -3,6 +3,7 @@
 //
 // You only need this if you want to change which cities are in the pool.
 //   cd tools && npm install all-the-cities world-countries && node build-data.mjs
+// Then run build-borders.mjs to refresh the country outlines.
 //
 // WARNING: changing the dataset changes every puzzle, including past
 // archive days. Do it before launch, or accept that history reshuffles.
@@ -106,6 +107,8 @@ for (const [cc, list] of [...grouped.entries()].sort()) {
     sovereign: territory ? SOVEREIGN[cc] : null,
     kind: territory ? "territory" : disputed ? "disputed" : "sovereign",
     tier: TIER_OF[cc] || (console.warn("No tier for", cc), 4),
+    // Land neighbors (ISO alpha-2). Two neighbors never appear on the same day.
+    neighbors: (meta.borders || []).map((c3) => countries.find((x) => x.cca3 === c3)?.cca2).filter(Boolean),
   });
 
   const regions = REGION_NAMES[cc];

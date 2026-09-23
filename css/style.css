@@ -156,6 +156,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .result-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .result-text { flex: 1; min-width: 0; }
 .result-dist { font-family: var(--display); font-weight: 700; font-size: 19px; }
+.badge { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--mint); color: #24583d; }
 .result-calc { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
 .result-points { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1; text-align: right; }
 .result-points small { display: block; font-family: var(--body); font-weight: 400; font-size: 11px; color: var(--ink-soft); }

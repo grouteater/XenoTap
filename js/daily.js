@@ -5,7 +5,7 @@
 // day from LAUNCH_DATE forward in memory, so "recently used" is itself
 // derived from the seed. Same date in = same cities out, on every device.
 
-import { CONFIG } from "./config.js";
+import { CONFIG } from "./config.js?v=5";
 
 // ---- Dates ------------------------------------------------------------------
 
@@ -59,6 +59,12 @@ function weightedPick(items, weights, rng) {
   return items[items.length - 1];
 }
 
+function distKm(a, b) { // city rows: [name, ci, region, lat, lng, ...]
+  const r = Math.PI / 180;
+  const h = Math.sin(((b[3] - a[3]) * r) / 2) ** 2 + Math.cos(a[3] * r) * Math.cos(b[3] * r) * Math.sin(((b[4] - a[4]) * r) / 2) ** 2;
+  return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
 // ---- Puzzle generation ----------------------------------------------------------
 
 let DATA = null;
@@ -95,37 +101,46 @@ function generateDay(n) {
 
   const picks = [];
   const usedCountries = new Set();
+  const blockedNeighbors = new Set(); // country codes bordering something already picked today
   const continentCount = {};
 
   // Constraints are relaxed step by step only if a round's pool ever runs dry:
   // 0 = everything, 1 = ignore continent spread, 2 = allow recent countries,
-  // 3 = also allow neighboring tiers, 4 = any tier.
+  // 3 = also allow neighboring tiers, 4 = anything (last resort).
+  // Bordering countries and places closer than MIN_SPACING_KM are blocked at every level but 4.
   for (let round = 0; round < CONFIG.ROUNDS; round++) {
     const tiers = CONFIG.ROUND_TIERS[round] || [1, 2, 3, 4, 5];
     const exponent = CONFIG.ROUND_POP_EXPONENT[round] ?? 0.3;
     let chosen = null;
+    const rejected = new Set(); // countries with no city far enough from today's other picks
     for (let level = 0; level < 5 && chosen === null; level++) {
-      const candidates = [];
-      const weights = [];
-      DATA.countries.forEach((c, idx) => {
-        if (usedCountries.has(idx)) return;
-        if (level < 3 && !tiers.includes(c.tier)) return;
-        if (level === 3 && !tiers.some((t) => Math.abs(t - c.tier) <= 1)) return;
-        if (level < 2 && recentCountries.has(idx)) return;
-        if (level < 1 && (continentCount[c.continent] || 0) >= CONFIG.MAX_PER_CONTINENT) return;
-        if (citiesByCountry[idx].length - (recentPerCountry.get(idx) || 0) <= 0) return;
-        candidates.push(idx);
-        weights.push(c.kind === "territory" ? CONFIG.TERRITORY_WEIGHT : 1);
-      });
-      if (candidates.length === 0) continue;
-      const country = weightedPick(candidates, weights, rng);
-      const pool = citiesByCountry[country].filter((ci) => !recentCities.has(ci));
-      chosen = weightedPick(pool, pool.map((ci) => Math.pow(Math.min(DATA.cities[ci][5], CONFIG.CITY_POP_CAP), exponent)), rng);
+      while (chosen === null) {
+        const candidates = [];
+        const weights = [];
+        DATA.countries.forEach((c, idx) => {
+          if (usedCountries.has(idx) || rejected.has(idx)) return;
+          if (level < 4 && blockedNeighbors.has(c.cc)) return;
+          if (level < 3 && !tiers.includes(c.tier)) return;
+          if (level === 3 && !tiers.some((t) => Math.abs(t - c.tier) <= 1)) return;
+          if (level < 2 && recentCountries.has(idx)) return;
+          if (level < 1 && (continentCount[c.continent] || 0) >= CONFIG.MAX_PER_CONTINENT) return;
+          if (citiesByCountry[idx].length - (recentPerCountry.get(idx) || 0) <= 0) return;
+          candidates.push(idx);
+          weights.push(c.kind === "territory" ? CONFIG.TERRITORY_WEIGHT : 1);
+        });
+        if (candidates.length === 0) break; // relax to the next level
+        const country = weightedPick(candidates, weights, rng);
+        const pool = citiesByCountry[country].filter((ci) =>
+          !recentCities.has(ci) && (level === 4 || picks.every((p) => distKm(DATA.cities[p], DATA.cities[ci]) >= CONFIG.MIN_SPACING_KM)));
+        if (pool.length === 0) { rejected.add(country); continue; }
+        chosen = weightedPick(pool, pool.map((ci) => Math.pow(Math.min(DATA.cities[ci][5], CONFIG.CITY_POP_CAP), exponent)), rng);
+      }
     }
     if (chosen === null) break; // cannot happen with the shipped dataset
     const cIdx = DATA.cities[chosen][1];
     picks.push(chosen);
     usedCountries.add(cIdx);
+    for (const n of DATA.countries[cIdx].neighbors || []) blockedNeighbors.add(n);
     const cont = DATA.countries[cIdx].continent;
     continentCount[cont] = (continentCount[cont] || 0) + 1;
   }
