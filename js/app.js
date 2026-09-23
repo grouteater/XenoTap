@@ -1,8 +1,8 @@
-import { CONFIG } from "./config.js?v=8";
-import * as daily from "./daily.js?v=8";
+import { CONFIG } from "./config.js?v=9";
+import * as daily from "./daily.js?v=9";
 
 const $ = (id) => document.getElementById(id);
-// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=8").
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=9").
 const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
 
@@ -209,6 +209,17 @@ function initMap() {
       layout: { "line-join": "round" },
       paint: { "line-color": "#fdf6c8", "line-width": 2.2 },
     });
+    // Practice modes: faint outlines of every country, as a learning aid. Never in the daily.
+    if (MODE !== "daily") {
+      map.addSource("world", { type: "geojson", data: emptyFC() });
+      map.addLayer({ id: "world-lines", type: "line", source: "world", layout: { "line-join": "round" },
+        paint: { "line-color": "#ffffff", "line-opacity": 0.55, "line-width": ["interpolate", ["linear"], ["zoom"], 0, 0.6, 5, 1.4] } }, "borders-fill");
+      loadAllBorders().then((all) => {
+        const feats = [];
+        for (const fs of Object.values(all)) for (const f of fs) if (f.geometry) feats.push(f);
+        map.getSource("world").setData({ type: "FeatureCollection", features: feats });
+      });
+    }
     map.addSource("lines", { type: "geojson", lineMetrics: true, data: emptyFC() });
     map.addLayer({
       id: "lines-casing", type: "line", source: "lines",
@@ -913,20 +924,33 @@ const dot = (u, v) => u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
 const len = (u) => Math.hypot(u[0], u[1], u[2]);
 const angle = (u, v) => Math.atan2(len(cross(u, v)), dot(u, v));
 
-// Great-circle distance from P to the arc AB (all unit vectors), in radians.
+// Great-circle distance from P to the arc AB (all unit vectors), in radians,
+// plus the closest point on the arc.
 function arcDistance(P, A, B) {
   const n0 = cross(A, B), nl = len(n0);
-  if (nl < 1e-12) return angle(P, A);
+  if (nl < 1e-12) return [angle(P, A), A];
   const n = [n0[0] / nl, n0[1] / nl, n0[2] / nl];
   const s = dot(P, n);
   const C0 = [P[0] - s * n[0], P[1] - s * n[1], P[2] - s * n[2]];
   const cl = len(C0);
   if (cl > 1e-12) {
     const C = [C0[0] / cl, C0[1] / cl, C0[2] / cl];
-    if (dot(cross(A, C), n) >= 0 && dot(cross(C, B), n) >= 0) return Math.asin(Math.min(1, Math.abs(s)));
+    if (dot(cross(A, C), n) >= 0 && dot(cross(C, B), n) >= 0) return [Math.asin(Math.min(1, Math.abs(s))), C];
   }
-  return Math.min(angle(P, A), angle(P, B));
+  const da = angle(P, A), db = angle(P, B);
+  return da < db ? [da, A] : [db, B];
 }
+const unvec = (v) => [toDeg(Math.atan2(v[1], v[0])), toDeg(Math.asin(Math.max(-1, Math.min(1, v[2]))))];
+
+// Initial compass bearing from a to b, degrees clockwise from north.
+function bearingDeg(a, b) {
+  const [l1, p1, l2, p2] = [toRad(a[0]), toRad(a[1]), toRad(b[0]), toRad(b[1])];
+  const y = Math.sin(l2 - l1) * Math.cos(p2);
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(l2 - l1);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+const COMPASS = [["north", "⬆️"], ["northeast", "↗️"], ["east", "➡️"], ["southeast", "↘️"], ["south", "⬇️"], ["southwest", "↙️"], ["west", "⬅️"], ["northwest", "↖️"]];
+const compassFor = (deg) => COMPASS[Math.round(deg / 45) % 8];
 
 const ringVecs = new Map(); // cc -> array of rings as unit vectors
 function countryRings(cc, feats) {
@@ -944,18 +968,22 @@ function countryRings(cc, feats) {
 
 // Kilometers from a point to the nearest border of a country (0 if inside).
 async function distToCountryKm(pt, cc) {
+  return (await nearestBorder(pt, cc)).km;
+}
+// Distance to a country's nearest border and the nearest border point ([lng, lat]).
+async function nearestBorder(pt, cc) {
   const all = await loadAllBorders();
   const feats = all[cc] || [];
-  if (inCountry(pt, { features: feats })) return 0;
+  if (inCountry(pt, { features: feats })) return { km: 0, point: pt };
   const P = vec(pt);
-  let best = Infinity;
+  let best = Infinity, bestPt = null;
   for (const ring of countryRings(cc, feats)) {
     for (let i = 0; i < ring.length - 1; i++) {
-      const d = arcDistance(P, ring[i], ring[i + 1]);
-      if (d < best) best = d;
+      const [d, C] = arcDistance(P, ring[i], ring[i + 1]);
+      if (d < best) { best = d; bestPt = C; }
     }
   }
-  return best * EARTH_KM;
+  return { km: best * EARTH_KM, point: bestPt ? unvec(bestPt) : pt };
 }
 
 // Countries available to the practice modes: every playable country or
@@ -1188,7 +1216,17 @@ function hotColdMode() {
       const t = tempFor(tp.km);
       el.className = "temp-dot" + (k === game.taps.length - 1 ? " latest" : "");
       el.style.background = tp.km === 0 ? "#3ecf8e" : t.color;
-      dots.push(addMarker(markerRoot(el, k === game.taps.length - 1 && tp.km > 0 ? fmtKm(tp.km) : ""), tp.pt, "center"));
+      const latest = k === game.taps.length - 1;
+      const root = markerRoot(el, latest && tp.km > 0 ? fmtKm(tp.km) : "");
+      if (latest && tp.km > 0 && tp.b != null && !game.done) {
+        // Big arrow beside the latest tap, pointing at the mystery country's nearest border.
+        const arrow = document.createElement("div");
+        arrow.className = "dir-arrow";
+        arrow.style.setProperty("--rot", tp.b + "deg");
+        arrow.innerHTML = `<svg viewBox="0 0 40 56"><path d="M20 2 L38 26 L27 26 L27 54 L13 54 L13 26 L2 26 Z" fill="${t.color}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>`;
+        root.appendChild(arrow);
+      }
+      dots.push(addMarker(root, tp.pt, "center"));
     });
   }
 
@@ -1198,9 +1236,10 @@ function hotColdMode() {
     let hint = "";
     if (last) {
       const t = tempFor(last.km);
-      const trend = prev ? (last.km < prev.km - 1 ? " · warmer ↑" : last.km > prev.km + 1 ? " · colder ↓" : " · same") : "";
+      const trend = prev ? (last.km < prev.km - 1 ? "warmer than last" : last.km > prev.km + 1 ? "colder than last" : "same as last") : "";
+      const dir = last.b != null ? compassFor(last.b) : null;
       hint = last.km === 0 ? "✅ <b>You found it!</b>"
-        : `<b style="color:${t.color}">${t.emoji} ${t.name}</b> · ${fmtKm(last.km)} from its border${trend}`;
+        : `<div class="hc-reading"><span class="hc-arrow">${dir ? dir[1] : ""}</span><span><b style="color:${t.color}">${t.emoji} ${t.name}</b> · ${fmtKm(last.km)} away<br><span class="hc-sub">${dir ? `head <b>${dir[0]}</b>` : ""}${trend ? ` · ${trend}` : ""}</span></span></div>`;
     }
     const tt = game.done ? target() : null;
     setCard({
@@ -1225,10 +1264,11 @@ function hotColdMode() {
     if (busy || game.done) return;
     busy = true;
     const t = target();
-    let km = await distToCountryKm(pt, t.cc);
+    const nb = await nearestBorder(pt, t.cc);
+    let km = nb.km;
     // Inside counts, and so does a tap right on the border line (small countries get more slack).
     if (km <= (t.area < 20000 ? 25 : 2)) km = 0;
-    game.taps.push({ pt, km: Math.round(km) });
+    game.taps.push({ pt, km: Math.round(km), b: Math.round(bearingDeg(pt, nb.point)) });
     store.set(KEY, game);
     busy = false;
     if (km === 0) { finish(true); return; }

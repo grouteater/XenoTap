@@ -5,7 +5,7 @@
 // day from LAUNCH_DATE forward in memory, so "recently used" is itself
 // derived from the seed. Same date in = same cities out, on every device.
 
-import { CONFIG } from "./config.js?v=8";
+import { CONFIG } from "./config.js?v=9";
 
 // ---- Dates ------------------------------------------------------------------
 
