@@ -7,8 +7,8 @@
   <meta name="description" content="A daily geography game. Six cities, one satellite globe, no labels.">
   <meta name="theme-color" content="#d8d4e4">
   <!-- Add to Home Screen -->
-  <link rel="manifest" href="manifest.webmanifest?v=13">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=13">
+  <link rel="manifest" href="manifest.webmanifest?v=14">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=14">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="XenoTap">
@@ -18,8 +18,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
-  <link rel="stylesheet" href="vendor/maplibre-gl.css?v=13">
-  <link rel="stylesheet" href="css/style.css?v=13">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css?v=14">
+  <link rel="stylesheet" href="css/style.css?v=14">
 </head>
 <body>
   <div class="loading-screen" id="loading"><span class="shimmer">XenoTap</span></div>
@@ -54,6 +54,10 @@
   <section class="bottom" id="bottom">
     <div class="actions" id="actions-place">
       <p class="helper" id="helper">Tap the globe to place your guess</p>
+    </div>
+    <div class="actions" id="actions-done" hidden>
+      <button class="btn ghost" id="done-results">Results</button>
+      <button class="btn prism" id="done-next">Play again</button>
     </div>
     <div class="actions" id="actions-confirm" hidden>
       <button class="btn ghost" id="btn-cancel">Cancel</button>
@@ -100,6 +104,7 @@
         <button class="btn prism" id="btn-copy">Copy results</button>
         <button class="btn ghost" id="btn-view-globe">View globe</button>
       </div>
+      <button class="btn prism wide end-next" id="btn-end-next">Play practice mode</button>
       <h3 class="section-title">Rounds <small>tap one for country facts</small></h3>
       <ol class="breakdown" id="breakdown"></ol>
       <div id="end-stats-wrap">
@@ -186,7 +191,7 @@
     </div>
   </div>
 
-  <script src="vendor/maplibre-gl.js?v=13"></script>
-  <script type="module" src="js/app.js?v=13"></script>
+  <script src="vendor/maplibre-gl.js?v=14"></script>
+  <script type="module" src="js/app.js?v=14"></script>
 </body>
 </html>

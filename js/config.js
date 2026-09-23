@@ -44,7 +44,13 @@ export const CONFIG = {
   //   famous: hand-picked household names (tools/build-data.mjs FAMOUS list)
   //   known:  places most players have heard of (KNOWN list + big capitals)
   //   any:    every playable city, weighted toward harder countries
+  //   mixed:  famous + known together (an easier "known")
   ROUND_POOLS: ["famous", "famous", "known", "known", "any", "any"],
+  // One-off easier days. Note: changing a day that is already live also nudges
+  // later days a little (repeat avoidance looks back at earlier picks).
+  DAY_POOLS: {
+    "2026-09-23": ["famous", "famous", "mixed", "mixed", "known", "known"], // launch day: gentler
+  },
   AFRICA_FROM_ROUND: 5,             // African places only appear from this round on (1-based)
   // Rounds with the "any" pool: country weight by difficulty tier (5 = hardest),
   // and famous / known cities are made rarer so the Boss round stays a boss.

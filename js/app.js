@@ -1,8 +1,8 @@
-import { CONFIG } from "./config.js?v=13";
-import * as daily from "./daily.js?v=13";
+import { CONFIG } from "./config.js?v=14";
+import * as daily from "./daily.js?v=14";
 
 const $ = (id) => document.getElementById(id);
-// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=13").
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=14").
 const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
 // Round difficulty colors, easy green to boss red (match --r1..--r6 in the CSS).
@@ -626,12 +626,13 @@ function renderActions() {
   $("result-card").hidden = phase !== "reveal";
   const helper = $("helper");
   helper.classList.toggle("probe", probeMode);
+  // Finished: Results + a big next-step button (practice: new game, daily: go practice).
+  $("actions-done").hidden = phase !== "done";
   if (phase === "done") {
-    helper.textContent = "Tap Results to see your score";
-    helper.style.pointerEvents = "auto";
-    helper.onclick = openEnd;
-    helper.innerHTML = `<b>Results</b>`;
-    helper.style.cursor = "pointer";
+    $("actions-place").hidden = true;
+    $("done-results").onclick = openEnd;
+    $("done-next").textContent = PRACTICE ? "New game" : "Practice mode";
+    $("done-next").onclick = goNext;
   } else {
     helper.onclick = null;
     helper.style.pointerEvents = "none";
@@ -667,6 +668,12 @@ function shareText() {
   ].join("\n");
 }
 
+// After a daily: jump into practice. After a practice game: deal a new one.
+function goNext() {
+  if (PRACTICE) { store.set(PRACTICE_KEY, null); location.reload(); }
+  else location.href = "?mode=practice";
+}
+
 function openEnd() {
   const { total } = totals();
   $("end-day").textContent = PRACTICE ? "Practice game (not counted in stats)" : `XenoTap #${daily.puzzleNumber(date)} · ${fmtDate(date)}${isToday ? "" : " (archive)"}`;
@@ -677,7 +684,9 @@ function openEnd() {
   Promise.all(state.rounds.map(resolveLanded)).then(renderBreakdown);
   if (!PRACTICE) renderStats($("end-stats"));
   $("end-stats-wrap").hidden = PRACTICE;
-  $("btn-end-archive").textContent = PRACTICE ? "New practice game" : "Play past days";
+  $("btn-end-archive").hidden = PRACTICE;
+  $("btn-end-next").textContent = PRACTICE ? "New practice game" : "🎯 Keep playing: Practice mode";
+  $("btn-end-next").classList.toggle("outline", !PRACTICE); // daily: Copy results stays the main button
   $("countdown-ring").hidden = !isToday || PRACTICE;
   openSheet("end-sheet");
   tickCountdown();
@@ -949,6 +958,7 @@ function wireUI() {
     renderArchive(); openSheet("archive-sheet");
   };
   $("mode-again").onclick = () => controller && controller.restart();
+  $("btn-end-next").onclick = goNext;
   $("mode-copy").onclick = () => controller && copyText(controller.shareText());
   $("archive-date").onchange = (e) => {
     const d = e.target.value;
@@ -1070,12 +1080,24 @@ function setCard({ label, day, right, flag, text, hint }) {
 }
 
 function setHelper(text) {
+  $("actions-done").hidden = true;
   $("actions-place").hidden = false;
   $("actions-confirm").hidden = true;
   $("result-card").hidden = true;
   const h = $("helper");
   h.onclick = null; h.style.pointerEvents = "none";
   h.textContent = text;
+}
+
+// Practice modes, after a run ends: Results reopens the summary, Play again restarts.
+function showModeDone() {
+  $("actions-place").hidden = true;
+  $("actions-confirm").hidden = true;
+  $("result-card").hidden = true;
+  $("actions-done").hidden = false;
+  $("done-results").onclick = () => openSheet("mode-sheet");
+  $("done-next").textContent = "Play again";
+  $("done-next").onclick = () => controller && controller.restart();
 }
 
 function openModeSheet({ kicker, big, small, text, stats }) {
@@ -1192,7 +1214,7 @@ function streakMode() {
       text: `${where}. ${t.flag} <b>${escapeHtml(t.name)}</b> was ${fmtKm(km)} away.${run.streak > 0 && run.streak >= st.best ? "<br><b>New best!</b>" : ""}`,
       stats: statsHtml(),
     }), 900);
-    setHelper("Run over. Tap Play again to start a new one");
+    showModeDone();
   }
 
   function statsHtml() {
@@ -1306,7 +1328,7 @@ function hotColdMode() {
     giveUp.textContent = "Give up";
     giveUp.onclick = () => finish(false);
     $("pips").innerHTML = "";
-    setHelper(game.done ? "Tap Play again for a new mystery" : "Tap to take a reading. Tap inside it to win");
+    if (game.done) showModeDone(); else setHelper("Tap to take a reading. Tap inside it to win");
     drawDots();
   }
 

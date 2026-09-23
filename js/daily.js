@@ -5,7 +5,7 @@
 // day from LAUNCH_DATE forward in memory, so "recently used" is itself
 // derived from the seed. Same date in = same cities out, on every device.
 
-import { CONFIG } from "./config.js?v=13";
+import { CONFIG } from "./config.js?v=14";
 
 // ---- Dates ------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ function distKm(a, b) { // city rows: [name, ci, region, lat, lng, ...]
 
 let DATA = null;
 let citiesByCountry = null;
-let pools = null;   // pools[round] = { kind, byCountry: city idx arrays, flat: city idx array }
+const poolCache = new Map(); // "kind:round" -> { kind, byCountry: city idx arrays, flat: city idx array }
 const history = []; // history[n] = city indices for day n (0 = LAUNCH_DATE)
 
 const isAfrica = (k) => DATA.countries[k].continent === "Africa";
@@ -79,22 +79,31 @@ export function initData(data) {
   DATA = data;
   citiesByCountry = data.countries.map(() => []);
   data.cities.forEach((c, i) => citiesByCountry[c[1]].push(i));
-  pools = CONFIG.ROUND_POOLS.map((kind, round) => {
-    const africaOk = round + 1 >= CONFIG.AFRICA_FROM_ROUND;
-    const byCountry = citiesByCountry.map((list, k) => {
-      if (!africaOk && isAfrica(k)) return [];
-      const tier = data.countries[k].tier;
-      return list.filter((ci) => {
-        const [, , , , , pop, isCap, fame] = data.cities[ci];
-        if (pop < CONFIG.MIN_CITY_POP) return false;
-        if (kind === "famous") return fame === 2;
-        if (kind === "known") return fame === 1 || (isCap && tier <= 2 && fame !== 2 && pop >= CONFIG.KNOWN_CAPITAL_MIN_POP);
-        return true;
-      });
-    });
-    return { kind, byCountry, flat: byCountry.flat() };
-  });
+  poolCache.clear();
   history.length = 0;
+}
+
+// The pool of cities a round can draw from. Africa only from AFRICA_FROM_ROUND on.
+function poolFor(kind, round) {
+  const key = kind + ":" + round;
+  if (poolCache.has(key)) return poolCache.get(key);
+  const africaOk = round + 1 >= CONFIG.AFRICA_FROM_ROUND;
+  const byCountry = citiesByCountry.map((list, k) => {
+    if (!africaOk && isAfrica(k)) return [];
+    const tier = DATA.countries[k].tier;
+    return list.filter((ci) => {
+      const [, , , , , pop, isCap, fame] = DATA.cities[ci];
+      if (pop < CONFIG.MIN_CITY_POP) return false;
+      const known = fame === 1 || (isCap && tier <= 2 && fame !== 2 && pop >= CONFIG.KNOWN_CAPITAL_MIN_POP);
+      if (kind === "famous") return fame === 2;
+      if (kind === "known") return known;
+      if (kind === "mixed") return fame === 2 || known;
+      return true;
+    });
+  });
+  const pool = { kind, byCountry, flat: byCountry.flat() };
+  poolCache.set(key, pool);
+  return pool;
 }
 
 function generateDay(n) {
@@ -116,15 +125,15 @@ function generateDay(n) {
       else if (back <= CONFIG.RECENT_SOFT_DAYS) softCountries.add(k);
     }
   }
-  return pickSix(rng, recentCities, recentCountries, softCountries);
+  return pickSix(rng, recentCities, recentCountries, softCountries, CONFIG.DAY_POOLS?.[date] || CONFIG.ROUND_POOLS);
 }
 
 // Unlimited practice games: same rules as the daily, fresh random seed, no history.
 export function randomPuzzle(seed) {
-  return pickSix(mulberry32(seed >>> 0), new Set(), new Set(), new Set());
+  return pickSix(mulberry32(seed >>> 0), new Set(), new Set(), new Set(), CONFIG.ROUND_POOLS);
 }
 
-function pickSix(rng, recentCities, recentCountries, softCountries) {
+function pickSix(rng, recentCities, recentCountries, softCountries, kinds) {
   const picks = [];
   const usedCountries = new Set();
   const blockedNeighbors = new Set(); // country codes bordering something already picked today
@@ -135,7 +144,7 @@ function pickSix(rng, recentCities, recentCountries, softCountries) {
   // 0 = everything, 1 = ignore continent spread, 2 = allow recent countries,
   // 3 = allow recently used cities, 4 = ignore neighbors and spacing too.
   for (let round = 0; round < CONFIG.ROUNDS; round++) {
-    const pool = pools[round];
+    const pool = poolFor(kinds[round], round);
     const countryOk = (k, level) => {
       const c = DATA.countries[k];
       if (usedCountries.has(k)) return false;

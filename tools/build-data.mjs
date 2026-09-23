@@ -20,7 +20,7 @@ const countries = require("world-countries");
 // ---- Tunables -------------------------------------------------------------
 const POPULATION_FLOOR = 15000;      // cities below this are dropped (capitals exempt)
 const MAX_CITIES_PER_COUNTRY = 80;   // keep the N most populous per country
-const EXCLUDED_COUNTRIES = ["BR", "IN", "CN", "RU"];
+const EXCLUDED_COUNTRIES = ["BR", "IN", "CN", "RU", "MN"];
 // Places with no real cities, or not useful as answers.
 const SKIP = ["AQ", "TF", "BV", "HM", "GS", "UM", "IO", "PN", "CC", "CX", "TK", "NF", "SJ"];
 // ---------------------------------------------------------------------------
@@ -155,7 +155,7 @@ HR:Split|HR:Dubrovnik|SI:Ljubljana|SK:Bratislava|BA:Sarajevo|MC:Monaco|LU:Luxemb
 TH:Bangkok|TH:Phuket|TH:Chiang Mai|VN:Hanoi|VN:Ho Chi Minh City|PH:Manila|MY:Kuala Lumpur|ID:Jakarta|ID:Denpasar
 TW:Taipei|KR:Busan|JP:Hiroshima|JP:Sapporo|JP:Yokohama|JP:Nagoya|JP:Kobe|JP:Nagasaki|AE:Abu Dhabi|QA:Doha|IL:Tel Aviv
 SA:Riyadh|SA:Mecca|SA:Jeddah|IR:Tehran|IQ:Baghdad|AF:Kabul|PK:Karachi|PK:Islamabad|PK:Lahore|NP:Kathmandu|LK:Colombo
-LB:Beirut|JO:Amman|SY:Damascus|KW:Kuwait City|OM:Muscat|MN:Ulan Bator|KP:Pyongyang
+LB:Beirut|JO:Amman|SY:Damascus|KW:Kuwait City|OM:Muscat|KP:Pyongyang
 AR:Buenos Aires|AR:Córdoba|PE:Lima|PE:Cusco|CO:Bogotá|CO:Medellín|CO:Cartagena|CL:Santiago|EC:Quito|VE:Caracas
 BO:La Paz|UY:Montevideo|CR:San José|DO:Santo Domingo|HT:Port-au-Prince|BS:Nassau|JM:Kingston|JM:Montego Bay
 GT:Guatemala City|MX:Guadalajara|MX:Monterrey|MX:Tijuana|MX:Acapulco de Juárez|MX:Puerto Vallarta|MX:Mérida

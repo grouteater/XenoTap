@@ -12,7 +12,7 @@ A daily geography game. Six places a day, one unlabeled satellite globe, tap whe
 6. Go to **Settings > Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main**, folder **/ (root)**, then **Save**.
 7. Wait a minute or two. Your game is live at `https://YOUR-USERNAME.github.io/xenotap/`.
 
-**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=13` with `?v=14`, and so on).
+**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=14` with `?v=15`, and so on).
 
 To update later: on the repo page click **Add file > Upload files**, drag in the new contents of the folder, and commit. Files with the same name are replaced. Pages redeploys on its own within a minute or two. (For a one-line tweak you can also open the file on GitHub, click the pencil icon, edit, and commit.)
 
@@ -28,11 +28,13 @@ Open the menu (☰, top right):
 
 * **Daily puzzle:** the main game. Six places, same for everyone, new at midnight Eastern. Counts toward stats and streaks.
 * **Archive:** any past daily puzzle.
-* **Practice** (`?mode=practice`): the daily format with fresh random places, unlimited. Uses the exact same selection rules, never touches stats, and "New practice game" deals another.
+* **Practice** (`?mode=practice`): the daily format with fresh random places, unlimited. Uses the exact same selection rules and never touches stats. When a game ends, a big "New game" button sits at the bottom of the screen (and in the results), so you can keep going even while looking at the globe. After finishing the daily, "Keep playing: Practice mode" jumps straight in.
 * **Country Streak** (`?mode=streak`): a country's name and flag appear; tap inside it and confirm. One miss ends the run. Easy countries dominate early and harder ones ramp in as the streak grows (full ramp by 25). For territories (Puerto Rico, Greenland, French Guiana...) tapping the country that owns it also counts. Tiny countries (under 20,000 km²) get 30 km of slack, since they are only a few pixels wide at the zoom cap. Includes Brazil, India, China and Russia. Saves best streak, runs and average.
-* **Hot & Cold** (`?mode=hotcold`): a mystery country. Every tap reports the distance from your tap to its nearest border and a temperature (🥶 Freezing over 6,000 km, 🧊 Cold, 🌥️ Cool, ☀️ Warm, 🌶️ Hot, 🔥 Burning under 250 km), plus warmer or colder than your last tap. A big arrow next to your latest tap points toward the country's nearest border (along the globe's shortest path, so from New York to Mongolia it points north over the pole), and the card spells out the direction ("head northeast"). Earlier taps stay on the globe as colored dots. Tap inside it to win. Countries under 1,000 km² sit this mode out. Saves games, wins, average taps and best.
+* **Hot & Cold** (`?mode=hotcold`): a mystery country. Every tap reports the distance from your tap to its nearest border and a temperature (🥶 Freezing over 6,000 km, 🧊 Cold, 🌥️ Cool, ☀️ Warm, 🌶️ Hot, 🔥 Burning under 250 km), plus warmer or colder than your last tap. A big arrow next to your latest tap points toward the country's nearest border (along the globe's shortest path, so from New York to Kazakhstan it points north over the pole), and the card spells out the direction ("head northeast"). Earlier taps stay on the globe as colored dots. Tap inside it to win. Countries under 1,000 km² sit this mode out. Saves games, wins, average taps and best.
 
 All three practice modes draw faint outlines of every country on the globe as a learning aid. The daily puzzle never shows them.
+
+When a Country Streak or Hot & Cold game ends, the bottom of the screen shows "Results" and "Play again", so you can study the map and restart without hunting for a button.
 
 Each mode has its own stats (tap the stats button while in that mode). None of them affect the daily stats.
 
@@ -49,6 +51,7 @@ Everything adjustable is in `js/config.js`.
 | `HINT_FACTOR` | 0.5 | A hint multiplies that round's score by this. |
 | `MIN_CITY_POP` | 10,000 | No answer is ever smaller than this. |
 | `ROUND_POOLS` | famous ×2, known ×2, any ×2 | Which city pool each round draws from (see below). |
+| `DAY_POOLS` | 2026-09-23: gentler | One-off pool overrides for specific dates (launch day uses famous ×2, famous+known ×2, known ×2). |
 | `MAX_KM_PER_PX` | 270/402 | Zoom cap (see below). |
 | `LAUNCH_DATE` | 2026-09-23 | Puzzle #1 and the start of the archive. |
 | `AFRICA_FROM_ROUND` | 5 | African places only appear from round 5 on. |
@@ -109,7 +112,7 @@ To move a city between pools, edit the `FAMOUS` or `KNOWN` list in `tools/build-
 
 **Deterministic, with no history file.** The date string (Eastern time) is hashed into a seed for a small seeded random generator (mulberry32). To avoid repeats without storing anything, the game replays every day from `LAUNCH_DATE` up to the requested day in memory, which takes a fraction of a second even years out. That means any date, past or present, always produces the same six places on every device, and nothing can fall out of sync.
 
-**City pool.** GeoNames data (CC BY 4.0), rebuilt by `tools/build-data.mjs`: cities of at least 15,000 people, the 80 largest per country, plus every national capital regardless of size. Brazil, India, China and Russia are excluded. After the island rules, that comes to 6,925 places in 174 countries and territories.
+**City pool.** GeoNames data (CC BY 4.0), rebuilt by `tools/build-data.mjs`: cities of at least 15,000 people, the 80 largest per country, plus every national capital regardless of size. Brazil, India, China, Russia and Mongolia are excluded (the first four also play in Country Streak and Hot & Cold; Mongolia is out everywhere). After the island rules, that comes to 6,920 places in 173 countries and territories.
 
 **How names are shown:**
 * Countries: `City, Country` (e.g. Arlon, Belgium)
