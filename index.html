@@ -7,8 +7,8 @@
   <meta name="description" content="A daily geography game. Six cities, one satellite globe, no labels.">
   <meta name="theme-color" content="#d8d4e4">
   <!-- Add to Home Screen -->
-  <link rel="manifest" href="manifest.webmanifest?v=16">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=16">
+  <link rel="manifest" href="manifest.webmanifest?v=17">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=17">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="XenoTap">
@@ -18,8 +18,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
-  <link rel="stylesheet" href="vendor/maplibre-gl.css?v=16">
-  <link rel="stylesheet" href="css/style.css?v=16">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css?v=17">
+  <link rel="stylesheet" href="css/style.css?v=17">
 </head>
 <body>
   <div class="loading-screen" id="loading"><span class="shimmer">XenoTap</span></div>
@@ -46,6 +46,8 @@
       <button class="chip" id="btn-hint">Hint</button>
     </div>
     <div class="hint-result" id="hint-result" hidden></div>
+    <!-- After the game: All + one tab per round -->
+    <nav class="round-tabs" id="round-tabs" hidden></nav>
   </section>
 
   <div class="toast" id="toast" hidden></div>
@@ -191,7 +193,7 @@
     </div>
   </div>
 
-  <script src="vendor/maplibre-gl.js?v=16"></script>
-  <script type="module" src="js/app.js?v=16"></script>
+  <script src="vendor/maplibre-gl.js?v=17"></script>
+  <script type="module" src="js/app.js?v=17"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
-import { CONFIG } from "./config.js?v=16";
-import * as daily from "./daily.js?v=16";
+import { CONFIG } from "./config.js?v=17";
+import * as daily from "./daily.js?v=17";
 
 const $ = (id) => document.getElementById(id);
-// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=16").
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=17").
 const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
 // Round difficulty colors, easy green to boss red (match --r1..--r6 in the CSS).
@@ -571,9 +571,12 @@ function render(initial) {
 
   probeMode = state.phase === "guess" && !!r.hint && r.hint.type === "probe" && !r.hint.probe;
 
+  $("round-tabs").hidden = state.phase !== "done";
+  $("target-card").classList.toggle("summary", state.phase === "done");
   if (state.phase === "done") {
     renderActions();
-    if (initial) showAllResults(false);
+    showAllResults(!initial);
+    renderSummary(-1, false);
     openEnd();
     return;
   }
@@ -666,6 +669,55 @@ function shareText() {
     `${total} / ${Math.round(maxTotal())}`,
     url,
   ].join("\n");
+}
+
+// ---------------------------------------------------------------- finished-game card
+// The top card turns into a results card with tabs: "All" plus one per round.
+// Picking a round shows its details and flies the globe to that guess and answer.
+
+let summarySel = -1;
+function renderSummary(sel, fly = true) {
+  summarySel = sel;
+  const tabs = $("round-tabs");
+  tabs.innerHTML = `<button class="rt ${sel === -1 ? "on" : ""}" data-r="-1"><b>All</b><span>${totalOf(state.rounds)}</span></button>` +
+    state.rounds.map((r, i) => `<button class="rt ${sel === i ? "on" : ""}" data-r="${i}" style="--c:${ROUND_COLORS[i]}"><b>${i + 1}</b><span>${r.score ?? "-"}</span></button>`).join("");
+  tabs.querySelectorAll(".rt").forEach((b) => (b.onclick = () => renderSummary(+b.dataset.r)));
+  $("btn-hint").hidden = true;
+  $("pips").innerHTML = "";
+  const hr = $("hint-result");
+  hr.hidden = false;
+  $("mult-label").classList.remove("halved");
+  const title = PRACTICE ? "Practice" : `#${daily.puzzleNumber(date)}${isToday ? "" : " archive"}`;
+
+  if (sel === -1) {
+    $("round-label").textContent = "Results";
+    $("day-label").textContent = title;
+    $("mult-label").textContent = `max ${Math.round(maxTotal())}`;
+    $("target-flag").textContent = "🏁";
+    $("target-text").innerHTML = `${totalOf(state.rounds)} <small class="of">/ ${Math.round(maxTotal())}</small>`;
+    hr.innerHTML = `<div class="sum-grid">${state.rounds.map((r) => `<span>${roundCell(r)}</span>`).join("")}</div>`;
+    if (fly) showAllResults(true);
+    return;
+  }
+
+  const r = state.rounds[sel], c = cities[sel];
+  $("round-label").textContent = `${sel + 1}/${R} · ${CONFIG.ROUND_NAMES[sel] || ""}`;
+  $("day-label").textContent = title;
+  $("mult-label").textContent = `worth ${fmtMult(weightFor(sel))}`;
+  $("target-flag").textContent = c.flag;
+  $("target-text").textContent = c.label;
+  const where = r.landed === c.cc ? `<span class="badge">Right country</span>` : escapeHtml(landedText(r, sel));
+  hr.innerHTML = `<div class="sum-round"><b>${emojiFor(r.score || 0)} ${r.score} pts</b> · ${fmtKm(r.km)} away${r.hint ? " · 💡 hint" : ""}${where ? `<br>${where}` : ""}</div>`;
+  if (fly && r.guess) {
+    // Show just this round: guess, answer pin, line and the answer's border.
+    clearMarkers();
+    markers.extra.push(addMarker(guessEl(), r.guess));
+    markers.extra.push(addMarker(resultPinEl(`Round ${sel + 1}: ${placeName(sel)}`, `R${sel + 1}`), cityLngLat(sel)));
+    setLines([[r.guess, cityLngLat(sel)]]);
+    showBorders([c.cc]);
+    const mid = greatCircle(r.guess, cityLngLat(sel), 2)[1];
+    map.easeTo({ center: mid, zoom: zoomForSpan(Math.max(r.km * 1.6, 700)), padding: uiPadding(), duration: 1100 });
+  }
 }
 
 // After a daily: jump into practice. After a practice game: deal a new one.
@@ -834,14 +886,17 @@ function tickCountdown() {
   countdownTimer = setInterval(tick, 1000);
 }
 
+function placeName(i) {
+  return cities[i].name === cities[i].country ? cities[i].name : `${cities[i].name}, ${cities[i].country}`;
+}
+
 function showAllResults(animate = true) {
   clearMarkers();
   const pairs = [];
   state.rounds.forEach((r, i) => {
     if (!r.guess) return;
     markers.extra.push(addMarker(guessEl(), r.guess));
-    const place = cities[i].name === cities[i].country ? cities[i].name : `${cities[i].name}, ${cities[i].country}`;
-    markers.extra.push(addMarker(resultPinEl(`Round ${i + 1}: ${place}`, `R${i + 1}`), cityLngLat(i)));
+    markers.extra.push(addMarker(resultPinEl(`Round ${i + 1}: ${placeName(i)}`, `R${i + 1}`), cityLngLat(i)));
     pairs.push([r.guess, cityLngLat(i)]);
   });
   setLines(pairs);
@@ -965,7 +1020,7 @@ function wireUI() {
     if (daily.isValidDate(d) && d >= CONFIG.LAUNCH_DATE && d <= today) location.href = d === today ? "./" : `?date=${d}`;
   };
   $("btn-copy").onclick = copyResults;
-  $("btn-view-globe").onclick = () => { closeSheets(); showAllResults(true); };
+  $("btn-view-globe").onclick = () => { closeSheets(); renderSummary(-1); };
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { closeSheets(); if (pendingGuess) cancelGuess(); }
     if (e.key === "Enter" && controller) controller.confirm();

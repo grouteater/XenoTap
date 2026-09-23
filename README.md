@@ -12,7 +12,7 @@ A daily geography game. Six places a day, one unlabeled satellite globe, tap whe
 6. Go to **Settings > Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main**, folder **/ (root)**, then **Save**.
 7. Wait a minute or two. Your game is live at `https://YOUR-USERNAME.github.io/xenotap/`.
 
-**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=16` with `?v=17`, and so on).
+**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=17` with `?v=18`, and so on).
 
 To update later: on the repo page click **Add file > Upload files**, drag in the new contents of the folder, and commit. Files with the same name are replaced. Pages redeploys on its own within a minute or two. (For a one-line tweak you can also open the file on GitHub, click the pencil icon, edit, and commit.)
 
@@ -150,6 +150,8 @@ https://you.github.io/xenotap/
 **Add to Home Screen.** `manifest.webmanifest`, the icons in `icons/`, and the Apple meta tags make XenoTap open full screen with its own icon when added from Safari's Share menu.
 
 **Final results view.** After the last round, "View globe" shows each answer as a red pin labeled "Round 3: Tartu, Estonia", and the line from each guess fades from white (your guess) to red (the answer). Labels stay the same size at any zoom; when two would overlap, the later round shrinks to a short "R3" tag, and zooming in brings the full label back.
+
+**Results card with round tabs.** Once a game is finished (daily or practice), the top card turns into a results card: the total and the emoji grid, with a row of tabs along its bottom (All, then 1 to 6 in each round's difficulty color, with its score). Tapping a round shows that city, your score, how far off you were and which country you guessed, and flies the globe to just that round's guess, answer pin, line and border. Tapping All brings back every pin. The "View globe" button on the end sheet jumps to the All tab.
 
 **Look.** Plain and calm: soft lavender background, near-white cards with a hairline border and soft shadow, dark primary buttons, and round bars colored by difficulty (green for the warm-up through dark red for the boss). Red is reserved for map markers. No animated colors.
 
