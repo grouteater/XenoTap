@@ -5,7 +5,7 @@
 // day from LAUNCH_DATE forward in memory, so "recently used" is itself
 // derived from the seed. Same date in = same cities out, on every device.
 
-import { CONFIG } from "./config.js?v=14";
+import { CONFIG } from "./config.js?v=16";
 
 // ---- Dates ------------------------------------------------------------------
 
@@ -98,6 +98,7 @@ function poolFor(kind, round) {
       if (kind === "famous") return fame === 2;
       if (kind === "known") return known;
       if (kind === "mixed") return fame === 2 || known;
+      if (kind === "easy") return fame === 2 || (fame === 1 && tier === 1);
       return true;
     });
   });
@@ -121,11 +122,33 @@ function generateDay(n) {
     for (const ci of prev) {
       const k = DATA.cities[ci][1];
       if (back <= R[fameKey(ci)]) recentCities.add(ci);
-      if (back <= CONFIG.COUNTRY_REPEAT_DAYS) recentCountries.add(k);
-      else if (back <= CONFIG.RECENT_SOFT_DAYS) softCountries.add(k);
+      const hardDays = CONFIG.COUNTRY_REPEAT_OVERRIDES?.[DATA.countries[k].cc] ?? CONFIG.COUNTRY_REPEAT_DAYS;
+      if (back <= hardDays) recentCountries.add(k);
+      else if (back <= CONFIG.RECENT_SOFT_DAYS && hardDays === CONFIG.COUNTRY_REPEAT_DAYS) softCountries.add(k);
     }
   }
-  return pickSix(rng, recentCities, recentCountries, softCountries, CONFIG.DAY_POOLS?.[date] || CONFIG.ROUND_POOLS);
+  const kinds = CONFIG.DAY_POOLS?.[date] || CONFIG.ROUND_POOLS;
+  if (CONFIG.DAY_COUNTRIES?.[date]) return pickFromCountries(rng, CONFIG.DAY_COUNTRIES[date], kinds);
+  return pickSix(rng, recentCities, recentCountries, softCountries, kinds);
+}
+
+// A hand-picked day: one city per listed country, in order. Prefers the round's
+// usual pool (famous, known...), then falls back to any sizeable city there.
+function pickFromCountries(rng, codes, kinds) {
+  return codes.map((cc, round) => {
+    const k = DATA.countries.findIndex((c) => c.cc === cc);
+    if (k < 0) throw new Error("DAY_COUNTRIES: unknown or excluded country " + cc);
+    const order = [kinds[round], "mixed", "any"];
+    let cands = [];
+    for (const kind of order) {
+      // Ignore the Africa-from-round rule here: the day was chosen by hand.
+      cands = poolFor(kind, CONFIG.ROUNDS - 1).byCountry[k];
+      if (kind === "any") cands = cands.filter((ci) => DATA.cities[ci][5] >= 50000);
+      if (cands.length) break;
+    }
+    if (!cands.length) cands = citiesByCountry[k];
+    return weightedPick(cands, cands.map((ci) => Math.sqrt(Math.min(DATA.cities[ci][5], CONFIG.CITY_POP_CAP))), rng);
+  });
 }
 
 // Unlimited practice games: same rules as the daily, fresh random seed, no history.

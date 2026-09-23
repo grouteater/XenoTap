@@ -12,7 +12,7 @@ A daily geography game. Six places a day, one unlabeled satellite globe, tap whe
 6. Go to **Settings > Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main**, folder **/ (root)**, then **Save**.
 7. Wait a minute or two. Your game is live at `https://YOUR-USERNAME.github.io/xenotap/`.
 
-**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=14` with `?v=15`, and so on).
+**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=16` with `?v=17`, and so on).
 
 To update later: on the repo page click **Add file > Upload files**, drag in the new contents of the folder, and commit. Files with the same name are replaced. Pages redeploys on its own within a minute or two. (For a one-line tweak you can also open the file on GitHub, click the pencil icon, edit, and commit.)
 
@@ -50,8 +50,11 @@ Everything adjustable is in `js/config.js`.
 | `ROUND_NAMES` | Warm-up ... Boss | Shown on the round card. |
 | `HINT_FACTOR` | 0.5 | A hint multiplies that round's score by this. |
 | `MIN_CITY_POP` | 10,000 | No answer is ever smaller than this. |
-| `ROUND_POOLS` | famous ×2, known ×2, any ×2 | Which city pool each round draws from (see below). |
-| `DAY_POOLS` | 2026-09-23: gentler | One-off pool overrides for specific dates (launch day uses famous ×2, famous+known ×2, known ×2). |
+| `ROUND_POOLS` | famous, easy, known ×2, any ×2 | Which city pool each round draws from (see below). |
+| `DAY_COUNTRIES` | 2026-09-23: US, NZ, ZA, EE, UG, LA | Hand-pick the countries for a specific date, in round order; the game picks a city in each. Set before that day goes live. |
+| `DAY_POOLS` | none | One-off pool overrides for specific dates, e.g. a gentle holiday. Set before that day goes live. |
+| `CITY_REPEAT_DAYS` | famous 35, known 45, other 60 | A city cannot come back within this many days. |
+| `COUNTRY_REPEAT_OVERRIDES` | US 2, CA 4 | These countries may return sooner than the usual 7 days (always with a different city). |
 | `MAX_KM_PER_PX` | 270/402 | Zoom cap (see below). |
 | `LAUNCH_DATE` | 2026-09-23 | Puzzle #1 and the start of the archive. |
 | `AFRICA_FROM_ROUND` | 5 | African places only appear from round 5 on. |
@@ -88,9 +91,12 @@ Landing anywhere in the right country almost always scores well: most countries 
 
 | Rounds | Pool | What is in it |
 |---|---|---|
-| 1-2 Warm-up, Easy | **Famous** (77 cities) | Popular US and Canadian cities, very well known European cities (London, Paris, Rome, Venice, Stockholm...), and a few household names elsewhere (Tokyo, Sydney, Mexico City, Dubai, Hong Kong). |
-| 3-4 Medium, Tricky | **Known** (about 175 cities) | Places most people have heard of: Oslo, Brussels, Istanbul, Athens, Buenos Aires, Bangkok, Lima, Reykjavík, plus mid-size US, Canadian and Australian cities, plus capitals of 300,000+ in well-known countries. |
+| 1 Warm-up | **Famous** (105 cities) | Popular US and Canadian cities, very well known European cities (London, Paris, Rome, Venice, Nice, Stockholm...), and household names elsewhere (Tokyo, Sydney, Mexico City, Dubai, Bangkok, Nassau). |
+| 2 Easy | **Easy** (famous + about 70 more) | The famous list plus well-known cities in the easiest countries: mid-size US cities, Lyon, Kyoto, Málaga, Oslo. |
+| 3-4 Medium, Tricky | **Known** (about 150 cities) | Places most people have heard of: Brussels, Istanbul, Athens, Buenos Aires, Lima, Reykjavík, Kathmandu, plus capitals of 300,000+ in well-known countries. |
 | 5-6 Hard, Boss | **Any** | Every playable city, weighted toward harder countries (difficulty tier 5 = 1.0 down to tier 1 = 0.3) and away from famous (×0.15) and known (×0.4) cities. |
+
+**Keeping the early rounds fresh.** A simulated year of rounds 1-2 uses about 170 different cities; the same city comes back after about 47 days on average and never within 35 days. The US appears in round 1 about one day in four (it has 45 famous cities and may return after 2 days, always with a different city), Canada after 4 days, and every other country after at least a week.
 
 Africa only appears in rounds 5 and 6. Because Africa has far more small countries than any other region, equal per-country weighting would make about 60% of late rounds African, so African countries get 0.45 weight there: over a simulated year that is about 40% of round 5-6 picks. Every place also has a difficulty tier from 1 to 5 (from a typical American's point of view), used for weighting rounds 5-6 and the practice modes:
 
@@ -102,7 +108,7 @@ Africa only appears in rounds 5 and 6. Because Africa has far more small countri
 | 4 | Armenia, Georgia, Belarus, Botswana, Moldova, DR Congo |
 | 5 | Kyrgyzstan, Suriname, Bhutan, Laos, Brunei, Libya, Senegal, Chad |
 
-In rounds 1-4 a city is picked directly from the pool; a country's chance grows with its number of listed cities, but more slowly (count^0.7), so the US is the most common country without taking over. Nothing anywhere is under 10,000 people. Each day has no two countries that share a land border and no two places closer than 1,000 km (`MIN_SPACING_KM`); rounds 1-4 allow at most two places per continent. A country cannot return within 7 days and is less likely for 30 days after that. A city cannot return within 21 days (famous), 30 days (known) or 60 days (everything else).
+In rounds 1-4 a city is picked directly from the pool; a country's chance grows with its number of listed cities, but more slowly (count^0.7). Nothing anywhere is under 10,000 people. Each day has no two countries that share a land border and no two places closer than 1,000 km (`MIN_SPACING_KM`); rounds 1-4 allow at most two places per continent. A country cannot return within 7 days and is less likely for 30 days after that. A city cannot return within 35 days (famous), 45 days (known) or 60 days (everything else).
 
 To move a city between pools, edit the `FAMOUS` or `KNOWN` list in `tools/build-data.mjs` and rerun it.
 

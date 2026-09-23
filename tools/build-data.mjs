@@ -141,29 +141,30 @@ CA:Toronto|CA:Montréal|CA:Vancouver|CA:Calgary|CA:Ottawa|CA:Edmonton|CA:Québec
 GB:London|GB:Edinburgh|GB:Manchester|GB:Liverpool|FR:Paris|IT:Rome|IT:Venice|IT:Milan|IT:Florence|ES:Madrid|ES:Barcelona
 DE:Berlin|DE:Munich|NL:Amsterdam|AT:Vienna|CZ:Prague|IE:Dublin|PT:Lisbon|SE:Stockholm|DK:Copenhagen
 JP:Tokyo|JP:Kyoto|JP:Osaka|AU:Sydney|AU:Melbourne|MX:Mexico City|MX:Cancún|HK:Hong Kong|AE:Dubai|KR:Seoul|SG:Singapore
-CU:Havana|PR:San Juan|IL:Jerusalem`;
+CU:Havana|PR:San Juan|IL:Jerusalem
+US:Cleveland|US:Milwaukee|US:Sacramento|US:San Jose|US:Columbus|US:Raleigh|US:Jacksonville|US:Louisville|US:Oklahoma City|US:Buffalo|CA:Victoria|CA:Halifax|FR:Nice|ES:Sevilla|IT:Naples|DE:Hamburg|DE:Frankfurt am Main|CH:Zürich|CH:Genève|TH:Bangkok|NZ:Auckland|AU:Brisbane|MX:Tijuana|MX:Acapulco de Juárez|BS:Nassau|JM:Montego Bay|IL:Tel Aviv|JP:Hiroshima`;
 // KNOWN: rounds 3-4. Places most players have heard of. National capitals of
 // tier 1-2 countries outside Africa are added automatically.
 const KNOWN = `
 NO:Oslo|NO:Bergen|BE:Brussels|BE:Antwerpen|TR:Istanbul|TR:Ankara|TR:İzmir|TR:Antalya|GR:Athens|GR:Thessaloníki|FI:Helsinki
-PL:Warsaw|PL:Kraków|HU:Budapest|CH:Zürich|CH:Genève|CH:Bern|FR:Lyon|FR:Marseille|FR:Nice|FR:Bordeaux|FR:Strasbourg
-IT:Naples|IT:Turin|IT:Bologna|IT:Verona|IT:Genoa|IT:Pisa|ES:Sevilla|ES:Valencia|ES:Málaga|ES:Granada|ES:Bilbao
-DE:Hamburg|DE:Frankfurt am Main|DE:Köln|DE:Stuttgart|DE:Düsseldorf|DE:Dresden|AT:Salzburg|AT:Innsbruck|NL:Rotterdam
+PL:Warsaw|PL:Kraków|HU:Budapest|CH:Bern|FR:Lyon|FR:Marseille|FR:Bordeaux|FR:Strasbourg
+IT:Turin|IT:Bologna|IT:Verona|IT:Genoa|IT:Pisa|ES:Valencia|ES:Málaga|ES:Granada|ES:Bilbao
+DE:Köln|DE:Stuttgart|DE:Düsseldorf|DE:Dresden|AT:Salzburg|AT:Innsbruck|NL:Rotterdam
 NL:The Hague|PT:Porto|GB:Glasgow|GB:Birmingham|GB:Belfast|GB:Cardiff|GB:Bristol|GB:Oxford|GB:Cambridge|GB:Leeds
 SE:Göteborg|IS:Reykjavík|EE:Tallinn|LV:Riga|LT:Vilnius|UA:Kyiv|UA:Odessa|RO:Bucharest|BG:Sofia|RS:Belgrade|HR:Zagreb
 HR:Split|HR:Dubrovnik|SI:Ljubljana|SK:Bratislava|BA:Sarajevo|MC:Monaco|LU:Luxembourg|BY:Minsk|CY:Nicosia
-TH:Bangkok|TH:Phuket|TH:Chiang Mai|VN:Hanoi|VN:Ho Chi Minh City|PH:Manila|MY:Kuala Lumpur|ID:Jakarta|ID:Denpasar
-TW:Taipei|KR:Busan|JP:Hiroshima|JP:Sapporo|JP:Yokohama|JP:Nagoya|JP:Kobe|JP:Nagasaki|AE:Abu Dhabi|QA:Doha|IL:Tel Aviv
+TH:Phuket|TH:Chiang Mai|VN:Hanoi|VN:Ho Chi Minh City|PH:Manila|MY:Kuala Lumpur|ID:Jakarta|ID:Denpasar
+TW:Taipei|KR:Busan|JP:Sapporo|JP:Yokohama|JP:Nagoya|JP:Kobe|JP:Nagasaki|AE:Abu Dhabi|QA:Doha|
 SA:Riyadh|SA:Mecca|SA:Jeddah|IR:Tehran|IQ:Baghdad|AF:Kabul|PK:Karachi|PK:Islamabad|PK:Lahore|NP:Kathmandu|LK:Colombo
 LB:Beirut|JO:Amman|SY:Damascus|KW:Kuwait City|OM:Muscat|KP:Pyongyang
 AR:Buenos Aires|AR:Córdoba|PE:Lima|PE:Cusco|CO:Bogotá|CO:Medellín|CO:Cartagena|CL:Santiago|EC:Quito|VE:Caracas
-BO:La Paz|UY:Montevideo|CR:San José|DO:Santo Domingo|HT:Port-au-Prince|BS:Nassau|JM:Kingston|JM:Montego Bay
-GT:Guatemala City|MX:Guadalajara|MX:Monterrey|MX:Tijuana|MX:Acapulco de Juárez|MX:Puerto Vallarta|MX:Mérida
-US:Tucson|US:Albuquerque|US:El Paso|US:Oklahoma City|US:Louisville|US:Milwaukee|US:Cincinnati|US:Cleveland|US:Buffalo
-US:Raleigh|US:Richmond|US:Savannah|US:Charleston|US:Santa Fe|US:Reno|US:Boise|US:Omaha|US:Sacramento|US:San Jose
-US:Jacksonville|US:Columbus|US:Birmingham|US:Des Moines|US:Madison|US:Spokane|US:Tulsa
-CA:Victoria|CA:Halifax|CA:Saskatoon|CA:Regina|CA:St. John's|CA:Hamilton
-AU:Brisbane|AU:Perth|AU:Adelaide|AU:Canberra|AU:Hobart|AU:Darwin|AU:Gold Coast|NZ:Auckland|NZ:Wellington|NZ:Christchurch`;
+BO:La Paz|UY:Montevideo|CR:San José|DO:Santo Domingo|HT:Port-au-Prince|JM:Kingston|
+GT:Guatemala City|MX:Guadalajara|MX:Monterrey|MX:Puerto Vallarta|MX:Mérida
+US:Tucson|US:Albuquerque|US:El Paso|US:Cincinnati|
+US:Richmond|US:Savannah|US:Charleston|US:Santa Fe|US:Reno|US:Boise|US:Omaha|
+US:Birmingham|US:Des Moines|US:Madison|US:Spokane|US:Tulsa
+CA:Saskatoon|CA:Regina|CA:St. John's|CA:Hamilton
+AU:Perth|AU:Adelaide|AU:Canberra|AU:Hobart|AU:Darwin|AU:Gold Coast|NZ:Wellington|NZ:Christchurch`;
 const parseList = (txt) => new Set(txt.replace(/\n/g, "|").split("|").map((x) => x.trim()).filter(Boolean));
 const FAMOUS_SET = parseList(FAMOUS);
 const KNOWN_SET = parseList(KNOWN);

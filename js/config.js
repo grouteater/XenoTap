@@ -7,7 +7,7 @@ export const CONFIG = {
   // ---- Calendar -----------------------------------------------------------
   LAUNCH_DATE: "2026-09-23",        // puzzle #1, earliest archive day (affects puzzles)
   TIMEZONE: "America/New_York",     // daily rollover at midnight Eastern
-  SEED_SALT: "xenotap-v2",          // (affects puzzles)
+  SEED_SALT: "xenotap-v3",          // (affects puzzles)
 
   // ---- Rounds and scoring -------------------------------------------------
   ROUNDS: 6,
@@ -44,12 +44,18 @@ export const CONFIG = {
   //   famous: hand-picked household names (tools/build-data.mjs FAMOUS list)
   //   known:  places most players have heard of (KNOWN list + big capitals)
   //   any:    every playable city, weighted toward harder countries
+  //   easy:   famous + known cities in tier 1 countries (Lyon, Kyoto, mid-size US cities)
   //   mixed:  famous + known together (an easier "known")
-  ROUND_POOLS: ["famous", "famous", "known", "known", "any", "any"],
+  ROUND_POOLS: ["famous", "easy", "known", "known", "any", "any"],
   // One-off easier days. Note: changing a day that is already live also nudges
   // later days a little (repeat avoidance looks back at earlier picks).
+  // Hand-picked countries for a specific date, in round order. A city inside each
+  // is still chosen by the game (famous or known first, when the country has any).
+  DAY_COUNTRIES: {
+    "2026-09-23": ["US", "NZ", "ZA", "EE", "UG", "LA"],
+  },
   DAY_POOLS: {
-    "2026-09-23": ["famous", "famous", "mixed", "mixed", "known", "known"], // launch day: gentler
+    // "2026-12-25": ["famous", "famous", "mixed", "mixed", "known", "known"], // example: a gentle holiday
   },
   AFRICA_FROM_ROUND: 5,             // African places only appear from this round on (1-based)
   // Rounds with the "any" pool: country weight by difficulty tier (5 = hardest),
@@ -73,8 +79,11 @@ export const CONFIG = {
   MIN_SPACING_KM: 1000,             // any two places on the same day are at least this far apart
   // Countries that share a land border never appear on the same day.
   COUNTRY_REPEAT_DAYS: 7,           // a country will not recur within this window
+  // ...except these, which have lots of famous cities and can come back sooner
+  // (always with a different city).
+  COUNTRY_REPEAT_OVERRIDES: { US: 2, CA: 4 },
   RECENT_SOFT_DAYS: 30,             // ...and is less likely for this long after that
   RECENT_SOFT_WEIGHT: 0.3,
   // A city will not recur within this many days (famous ones come back sooner).
-  CITY_REPEAT_DAYS: { famous: 21, known: 30, other: 60 },
+  CITY_REPEAT_DAYS: { famous: 35, known: 45, other: 60 },
 };
