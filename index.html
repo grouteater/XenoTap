@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <title>XenoTap</title>
+  <meta name="description" content="A daily geography game. Six cities, one satellite globe, no labels.">
+  <meta name="theme-color" content="#f0eff5">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23ff6ec7'/><stop offset='.35' stop-color='%237afcff'/><stop offset='.7' stop-color='%23b58cff'/><stop offset='1' stop-color='%23fff27a'/></linearGradient></defs><circle cx='50' cy='50' r='44' fill='url(%23g)'/><circle cx='50' cy='50' r='12' fill='%23f0eff5'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="prismStroke" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff6ec7"/><stop offset=".3" stop-color="#fff27a"/>
+        <stop offset=".55" stop-color="#7afcff"/><stop offset=".8" stop-color="#8fa8ff"/><stop offset="1" stop-color="#b58cff"/>
+      </linearGradient>
+      <linearGradient id="prismFill" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff6ec7"/><stop offset=".35" stop-color="#fff27a"/>
+        <stop offset=".65" stop-color="#7afcff"/><stop offset="1" stop-color="#b58cff"/>
+      </linearGradient>
+    </defs>
+  </svg>
+  <div class="loading-screen" id="loading"><span class="shimmer">XenoTap</span></div>
+  <div id="map" aria-label="Satellite globe. Drag to rotate, pinch or scroll to zoom, tap to place your guess."></div>
+
+  <header class="topbar">
+    <button class="icon-btn" id="btn-help" aria-label="How to play">?</button>
+    <h1 class="logo shimmer">XenoTap</h1>
+    <button class="icon-btn" id="btn-archive" aria-label="Archive">&#9783;</button>
+  </header>
+
+  <section class="card target-card" id="target-card" aria-live="polite">
+    <div class="target-meta">
+      <span id="round-label">Round 1 / 6</span>
+      <span id="day-label"></span>
+      <span id="mult-label">×1.0</span>
+    </div>
+    <div class="target-name"><span class="flag" id="target-flag"></span><span id="target-text">Loading…</span></div>
+    <div class="target-foot">
+      <div class="pips" id="pips"></div>
+      <button class="chip" id="btn-hint">Hint</button>
+    </div>
+    <div class="hint-result" id="hint-result" hidden></div>
+  </section>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <!-- Bottom action area: swaps content by phase -->
+  <section class="bottom" id="bottom">
+    <div class="actions" id="actions-place">
+      <p class="helper" id="helper">Tap the globe to place your guess</p>
+    </div>
+    <div class="actions" id="actions-confirm" hidden>
+      <button class="btn ghost" id="btn-cancel">Cancel</button>
+      <button class="btn prism" id="btn-confirm">Confirm guess</button>
+    </div>
+    <div class="card result-card" id="result-card" hidden>
+      <div class="result-row">
+        <div class="ring" id="result-ring"><svg viewBox="0 0 44 44"><circle class="ring-bg" cx="22" cy="22" r="18"/><circle class="ring-fg" cx="22" cy="22" r="18"/></svg><span id="result-base">0</span></div>
+        <div class="result-text">
+          <div class="result-dist" id="result-dist"></div>
+          <div class="result-calc" id="result-calc"></div>
+        </div>
+        <div class="result-points"><span id="result-points">0</span><small>pts</small></div>
+      </div>
+      <button class="btn prism wide" id="btn-next">Next round</button>
+    </div>
+  </section>
+
+  <!-- Hint chooser -->
+  <div class="sheet-backdrop" id="hint-sheet" hidden>
+    <div class="card sheet">
+      <h2>Pick one hint</h2>
+      <p class="muted">Using a hint halves this round's multiplier (<span id="hint-mult-note"></span>).</p>
+      <button class="option" data-hint="hemisphere"><b>Hemisphere</b><span>North or south, east or west</span></button>
+      <button class="option" data-hint="continent"><b>Continent</b><span>Which continent the city is on</span></button>
+      <button class="option" data-hint="probe"><b>Warm / Cold</b><span>Tap one test spot. Warm means within <span id="warm-km"></span> km.</span></button>
+      <button class="btn ghost wide" data-close>Never mind</button>
+    </div>
+  </div>
+
+  <!-- End of game -->
+  <div class="sheet-backdrop" id="end-sheet" hidden>
+    <div class="card sheet end">
+      <div class="end-head">
+        <div>
+          <div class="muted" id="end-day"></div>
+          <div class="end-total"><span class="shimmer" id="end-total">0</span><small id="end-max"> / 900</small></div>
+        </div>
+        <div class="ring big" id="countdown-ring" title="Next puzzle"><svg viewBox="0 0 44 44"><circle class="ring-bg" cx="22" cy="22" r="18"/><circle class="ring-fg" cx="22" cy="22" r="18"/></svg><span id="countdown">--:--</span></div>
+      </div>
+      <div class="share-grid" id="end-grid"></div>
+      <ol class="breakdown" id="breakdown"></ol>
+      <div class="end-actions">
+        <button class="btn prism" id="btn-copy">Copy results</button>
+        <button class="btn ghost" id="btn-view-globe">View globe</button>
+      </div>
+      <button class="link-btn" id="btn-end-archive">Play past days</button>
+    </div>
+  </div>
+
+  <!-- Archive -->
+  <div class="sheet-backdrop" id="archive-sheet" hidden>
+    <div class="card sheet">
+      <h2>Archive</h2>
+      <label class="date-row">
+        <span>Jump to a date</span>
+        <input type="date" id="archive-date">
+      </label>
+      <ul class="archive-list" id="archive-list"></ul>
+      <button class="btn ghost wide" data-close>Close</button>
+    </div>
+  </div>
+
+  <!-- Help -->
+  <div class="sheet-backdrop" id="help-sheet" hidden>
+    <div class="card sheet help">
+      <h2>How to play</h2>
+      <p>Six places a day. Find each one on the satellite globe and tap your guess. There are no labels and no borders, only the planet.</p>
+      <ul>
+        <li><b>Drag</b> to spin the globe, <b>pinch or scroll</b> to zoom. Zoom stops at about the width of Florida.</li>
+        <li><b>Tap</b> to drop a pin, then <b>Confirm</b>. Tap somewhere else first if you change your mind.</li>
+        <li>Each round scores up to <b>100</b> for proximity, then gets multiplied. Round 1 is ×1.0 and round 6 is ×2.0, for a max of <b>900</b>.</li>
+        <li>One optional <b>hint</b> per round (hemisphere, continent, or a warm/cold test tap). It halves that round's multiplier.</li>
+        <li>New puzzle every midnight Eastern time. Everyone gets the same six.</li>
+      </ul>
+      <p class="muted small">Share grid: 🎯 95+ &nbsp;🟩 75+ &nbsp;🟨 50+ &nbsp;🟧 25+ &nbsp;🟥 5+ &nbsp;⬛ under 5 (proximity score before multipliers). 💡 counts hints used.</p>
+      <p class="muted small">Imagery: Esri World Imagery. Places: GeoNames (CC BY 4.0).</p>
+      <button class="btn prism wide" data-close>Let's go</button>
+    </div>
+  </div>
+
+  <script src="vendor/maplibre-gl.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
