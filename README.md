@@ -12,7 +12,7 @@ A daily geography game. Six places a day, one unlabeled satellite globe, tap whe
 6. Go to **Settings > Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main**, folder **/ (root)**, then **Save**.
 7. Wait a minute or two. Your game is live at `https://YOUR-USERNAME.github.io/xenotap/`.
 
-**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=10` with `?v=11`, and so on).
+**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=11` with `?v=12`, and so on).
 
 To update later: on the repo page click **Add file > Upload files**, drag in the new contents of the folder, and commit. Files with the same name are replaced. Pages redeploys on its own within a minute or two. (For a one-line tweak you can also open the file on GitHub, click the pencil icon, edit, and commit.)
 
@@ -142,7 +142,9 @@ https://you.github.io/xenotap/
 
 **Add to Home Screen.** `manifest.webmanifest`, the icons in `icons/`, and the Apple meta tags make XenoTap open full screen with its own icon when added from Safari's Share menu.
 
-**Answer marker.** The real location gets a red circle with big red arrows pointing at it, in the style of a YouTube clickbait thumbnail.
+**Final results view.** After the last round, "View globe" shows each answer as a red pin labeled "Round 3: Tartu, Estonia". Labels stay the same size at any zoom; when two would overlap, the later round shrinks to a short "R3" tag, and zooming in brings the full label back.
+
+**Answer marker.** During the rounds, the real location gets a red circle with big red arrows pointing at it, in the style of a YouTube clickbait thumbnail.
 
 ## Rebuilding the city data (optional)
 

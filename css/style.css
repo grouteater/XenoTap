@@ -325,3 +325,10 @@ body[data-mode="streak"] #pips, body[data-mode="hotcold"] #pips { display: none;
 .hc-reading { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .hc-arrow { font-size: 30px; line-height: 1; }
 .hc-sub { font-size: 13px; color: var(--ink-soft); }
+
+/* ---------- v11: final results pins ---------- */
+.result-pin { z-index: 2; }
+.pin.red { width: 26px; height: 35px; }
+.result-label { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 7px;
+  background: rgba(255,255,255,.93); border-left: 3px solid #ff2d2d; }
+.result-label.short { padding: 1px 5px; font-size: 10.5px; }

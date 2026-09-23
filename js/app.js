@@ -1,8 +1,8 @@
-import { CONFIG } from "./config.js?v=10";
-import * as daily from "./daily.js?v=10";
+import { CONFIG } from "./config.js?v=11";
+import * as daily from "./daily.js?v=11";
 
 const $ = (id) => document.getElementById(id);
-// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=10").
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=11").
 const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
 
@@ -196,6 +196,7 @@ function initMap() {
   // Hard zoom cap: maxZoom is recomputed from the center latitude as the view
   // moves, so ground resolution never gets finer than CONFIG.MAX_KM_PER_PX.
   map.on("move", updateZoomCap);
+  map.on("move", () => queueDeclutter());
 
   map.on("load", () => {
     // Country outlines for revealed answers (under the guess lines).
@@ -302,6 +303,22 @@ function markerRoot(inner, label) {
     l.textContent = label;
     root.appendChild(l);
   }
+  return root;
+}
+
+// Final results view: a red pin with a small fixed-size label ("Round 3: Tartu, Estonia").
+function resultPinEl(label, short) {
+  const el = document.createElement("div");
+  el.className = "pin red";
+  el.innerHTML = `<svg viewBox="0 0 30 40"><path d="M15 38.5C15 38.5 2.5 24.5 2.5 15a12.5 12.5 0 0 1 25 0c0 9.5-12.5 23.5-12.5 23.5z" fill="#ff2d2d" stroke="#ffffff" stroke-width="3"/><circle cx="15" cy="15" r="4.5" fill="#ffffff"/></svg>`;
+  const root = markerRoot(el);
+  const l = document.createElement("div");
+  l.className = "marker-label result-label";
+  l.textContent = label;
+  l.dataset.full = label;
+  l.dataset.short = short;
+  root.appendChild(l);
+  root.classList.add("result-pin");
   return root;
 }
 
@@ -811,11 +828,13 @@ function showAllResults(animate = true) {
   state.rounds.forEach((r, i) => {
     if (!r.guess) return;
     markers.extra.push(addMarker(guessEl(), r.guess));
-    markers.extra.push(addMarker(answerEl(cities[i].name, true), cityLngLat(i), "center"));
+    const place = cities[i].name === cities[i].country ? cities[i].name : `${cities[i].name}, ${cities[i].country}`;
+    markers.extra.push(addMarker(resultPinEl(`Round ${i + 1}: ${place}`, `R${i + 1}`), cityLngLat(i)));
     pairs.push([r.guess, cityLngLat(i)]);
   });
   setLines(pairs);
   showBorders(cities.map((c) => c.cc));
+  requestAnimationFrame(declutterLabels);
   // Center the globe on the average position of the day's answers.
   let x = 0, y = 0, z = 0;
   for (let i = 0; i < R; i++) {
@@ -824,6 +843,32 @@ function showAllResults(animate = true) {
   }
   const center = [toDeg(Math.atan2(y, x)), Math.max(-50, Math.min(50, toDeg(Math.atan2(z, Math.hypot(x, y)))))];
   map.easeTo({ center, zoom: overviewZoom(center[1]), padding: uiPadding(), duration: animate ? 900 : 0 });
+}
+
+// Result labels show in full when there is room; any that would overlap an
+// earlier round's label shrink to "R3". Re-run as the globe moves.
+function declutterLabels() {
+  const labels = [...document.querySelectorAll(".result-label")];
+  if (!labels.length) return;
+  const placed = [];
+  for (const l of labels) {
+    l.textContent = l.dataset.full;
+    l.classList.remove("short");
+    let r = l.getBoundingClientRect();
+    const hits = (a) => placed.some((b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top);
+    if (hits(r)) {
+      l.textContent = l.dataset.short;
+      l.classList.add("short");
+      r = l.getBoundingClientRect();
+    }
+    placed.push(r);
+  }
+}
+let declutterQueued = false;
+function queueDeclutter() {
+  if (declutterQueued || !document.querySelector(".result-label")) return;
+  declutterQueued = true;
+  requestAnimationFrame(() => { declutterQueued = false; declutterLabels(); });
 }
 
 function copyResults() { return copyText(shareText()); }
