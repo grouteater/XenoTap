@@ -45,6 +45,12 @@ export const CONFIG = {
   // Each country has a difficulty tier (1 = easy for Americans, 5 = obscure),
   // set in tools/build-data.mjs. Round N draws from the tiers listed here.
   ROUND_TIERS: [[1], [2], [3], [3, 4], [4], [5]],
+  // Every pick has at least this many people. Tiny capitals (Alofi, Funafuti,
+  // Vatican City) are never answers, and places with no town this big drop out.
+  MIN_CITY_POP: 10000,
+  // Per round, a city must be a national capital, its country's biggest city,
+  // or at least this big. Round 1 is Madrid / Toronto / Osaka territory.
+  ROUND_MIN_POP: [1000000, 250000, 50000, 10000, 10000, 10000],
   // How strongly each round favors big cities. city weight = min(pop, cap) ^ exponent.
   // Early rounds lean toward well known cities, late rounds toward small ones.
   ROUND_POP_EXPONENT: [0.5, 0.4, 0.35, 0.3, 0.25, 0.2],

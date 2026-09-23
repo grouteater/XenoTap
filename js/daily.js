@@ -5,7 +5,7 @@
 // day from LAUNCH_DATE forward in memory, so "recently used" is itself
 // derived from the seed. Same date in = same cities out, on every device.
 
-import { CONFIG } from "./config.js?v=5";
+import { CONFIG } from "./config.js?v=6";
 
 // ---- Dates ------------------------------------------------------------------
 
@@ -69,12 +69,21 @@ function distKm(a, b) { // city rows: [name, ci, region, lat, lng, ...]
 
 let DATA = null;
 let citiesByCountry = null;
+let eligible = null; // eligible[round][countryIdx] = city indices allowed in that round
 const history = []; // history[n] = city indices for day n (0 = LAUNCH_DATE)
 
 export function initData(data) {
   DATA = data;
   citiesByCountry = data.countries.map(() => []);
   data.cities.forEach((c, i) => citiesByCountry[c[1]].push(i));
+  const biggest = citiesByCountry.map((list) => list.reduce((b, ci) => (data.cities[ci][5] > data.cities[b][5] ? ci : b), list[0]));
+  eligible = Array.from({ length: CONFIG.ROUNDS }, (_, round) => {
+    const minPop = CONFIG.ROUND_MIN_POP[round] ?? CONFIG.MIN_CITY_POP;
+    return citiesByCountry.map((list, k) => list.filter((ci) => {
+      const [, , , , , pop, isCap] = data.cities[ci];
+      return pop >= CONFIG.MIN_CITY_POP && (pop >= minPop || isCap || ci === biggest[k]);
+    }));
+  });
   history.length = 0;
 }
 
@@ -91,12 +100,6 @@ function generateDay(n) {
       if (back <= CONFIG.CITY_REPEAT_DAYS) recentCities.add(ci);
       if (back <= CONFIG.COUNTRY_REPEAT_DAYS) recentCountries.add(DATA.cities[ci][1]);
     }
-  }
-
-  const recentPerCountry = new Map();
-  for (const ci of recentCities) {
-    const k = DATA.cities[ci][1];
-    recentPerCountry.set(k, (recentPerCountry.get(k) || 0) + 1);
   }
 
   const picks = [];
@@ -124,13 +127,13 @@ function generateDay(n) {
           if (level === 3 && !tiers.some((t) => Math.abs(t - c.tier) <= 1)) return;
           if (level < 2 && recentCountries.has(idx)) return;
           if (level < 1 && (continentCount[c.continent] || 0) >= CONFIG.MAX_PER_CONTINENT) return;
-          if (citiesByCountry[idx].length - (recentPerCountry.get(idx) || 0) <= 0) return;
+          if (!eligible[round][idx].some((ci) => !recentCities.has(ci))) return;
           candidates.push(idx);
           weights.push(c.kind === "territory" ? CONFIG.TERRITORY_WEIGHT : 1);
         });
         if (candidates.length === 0) break; // relax to the next level
         const country = weightedPick(candidates, weights, rng);
-        const pool = citiesByCountry[country].filter((ci) =>
+        const pool = eligible[round][country].filter((ci) =>
           !recentCities.has(ci) && (level === 4 || picks.every((p) => distKm(DATA.cities[p], DATA.cities[ci]) >= CONFIG.MIN_SPACING_KM)));
         if (pool.length === 0) { rejected.add(country); continue; }
         chosen = weightedPick(pool, pool.map((ci) => Math.pow(Math.min(DATA.cities[ci][5], CONFIG.CITY_POP_CAP), exponent)), rng);

@@ -1,8 +1,8 @@
-import { CONFIG } from "./config.js?v=5";
-import * as daily from "./daily.js?v=5";
+import { CONFIG } from "./config.js?v=6";
+import * as daily from "./daily.js?v=6";
 
 const $ = (id) => document.getElementById(id);
-// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=5").
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=6").
 const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
 
@@ -43,17 +43,18 @@ function greatCircle(a, b, n = 96) {
 
 // ---------------------------------------------------------------- scoring
 
-const baseMultiplier = (i) => CONFIG.MULTIPLIERS[i] ?? CONFIG.MULTIPLIERS[CONFIG.MULTIPLIERS.length - 1];
-const multiplierFor = (i, hinted) => baseMultiplier(i) * (hinted ? CONFIG.HINT_FACTOR : 1);
-const maxTotal = () => Array.from({ length: R }, (_, i) => baseMultiplier(i) * 100).reduce((a, b) => a + b, 0);
+// Every round is scored 0 to 100 (a hint halves it). The day's total weights
+// later, harder rounds more: total = sum of round score x MULTIPLIERS[round].
+const weightFor = (i) => CONFIG.MULTIPLIERS[i] ?? CONFIG.MULTIPLIERS[CONFIG.MULTIPLIERS.length - 1];
+const maxTotal = () => Array.from({ length: R }, (_, i) => weightFor(i) * 100).reduce((a, b) => a + b, 0);
+const totalOf = (rounds) => Math.round(rounds.reduce((a, r, i) => a + (r.score || 0) * weightFor(i), 0));
 
 function baseScore(km) {
   if (km <= CONFIG.PERFECT_RADIUS_KM) return 100;
   return Math.round(100 * Math.exp(-(km - CONFIG.PERFECT_RADIUS_KM) / CONFIG.SCORE_DECAY_KM));
 }
 
-// Share colors use the proximity score (before multipliers), so a hint or a
-// later round never changes the color.
+// Share colors follow the round score (0 to 100).
 function emojiFor(base) {
   if (base >= 95) return "🎯";
   if (base >= 80) return "🟩";
@@ -73,7 +74,7 @@ const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
-const gameKey = (d) => `xenotap:v2:game:${d}`;
+const gameKey = (d) => `xenotap:v3:game:${d}`;
 
 // ---------------------------------------------------------------- setup
 
@@ -91,7 +92,7 @@ let pendingGuess = null;
 const markers = { guess: null, answer: null, probe: null, extra: [] };
 
 function freshState(ids) {
-  return { v: 2, date, ids, round: 0, phase: "guess", rounds: Array.from({ length: R }, () => ({ guess: null, hint: null })) };
+  return { v: 3, date, ids, round: 0, phase: "guess", rounds: Array.from({ length: R }, () => ({ guess: null, hint: null })) };
 }
 function save() { store.set(gameKey(date), state); }
 
@@ -102,7 +103,7 @@ async function boot() {
 
   state = store.get(gameKey(date));
   const ids = cities.map((c) => c.index).join(",");
-  if (!state || state.v !== 2 || state.ids !== ids || !Array.isArray(state.rounds) || state.rounds.length !== R) state = freshState(ids);
+  if (!state || state.v !== 3 || state.ids !== ids || !Array.isArray(state.rounds) || state.rounds.length !== R) state = freshState(ids);
 
   initMap();
   wireUI();
@@ -201,7 +202,7 @@ function initMap() {
   });
 
   map.on("click", onMapTap);
-  window.xenotap = { map }; // handy for poking at the camera from devtools
+  window.xenotap = { map, cities }; // handy for poking at the game from devtools
 }
 
 function kmPerPx() {
@@ -379,8 +380,8 @@ function confirmGuess() {
   const r = cur();
   const km = haversineKm(pendingGuess, cityLngLat(i));
   const base = baseScore(km);
-  const mult = multiplierFor(i, !!r.hint);
-  Object.assign(r, { guess: pendingGuess, km, base, mult, score: Math.round(base * mult) });
+  const score = r.hint ? Math.round(base * CONFIG.HINT_FACTOR) : base;
+  Object.assign(r, { guess: pendingGuess, km, base, score });
   pendingGuess = null;
   state.phase = "reveal";
   save();
@@ -448,8 +449,7 @@ function render(initial) {
 
   $("round-label").textContent = `${i + 1}/${R} · ${CONFIG.ROUND_NAMES[i] || ""}`;
   $("day-label").textContent = `#${daily.puzzleNumber(date)}${isToday ? "" : " archive"}`;
-  const m = multiplierFor(i, !!r.hint);
-  $("mult-label").textContent = fmtMult(m) + (r.hint ? " hint" : "");
+  $("mult-label").textContent = r.hint ? "max 50 · hint" : `worth ${fmtMult(weightFor(i))}`;
   $("mult-label").classList.toggle("halved", !!r.hint);
   $("target-flag").textContent = c.flag;
   $("target-text").textContent = c.label;
@@ -502,11 +502,11 @@ function showResult(r, i) {
       $("result-dist").innerHTML = `${escapeHtml(distText)} <span class="badge">Right country</span>`;
     }
   });
-  $("result-calc").textContent = `${r.base} × ${fmtMult(r.mult).slice(1)}${r.hint ? " (hint)" : ""}`;
-  $("result-base").textContent = r.base;
+  $("result-calc").textContent = (r.hint ? `${r.base}, halved by hint · ` : "") + `counts ${fmtMult(weightFor(i))} in your total`;
+  $("result-base").textContent = fmtMult(weightFor(i));
   $("result-points").textContent = r.score;
   setRing($("result-ring"), 0);
-  requestAnimationFrame(() => requestAnimationFrame(() => setRing($("result-ring"), r.base / 100)));
+  requestAnimationFrame(() => requestAnimationFrame(() => setRing($("result-ring"), r.score / 100)));
   $("btn-next").textContent = i >= R - 1 ? "See results" : "Next round";
 }
 
@@ -540,13 +540,13 @@ function renderActions() {
 // ---------------------------------------------------------------- end of game
 
 function totals() {
-  const total = state.rounds.reduce((a, r) => a + (r.score || 0), 0);
+  const total = totalOf(state.rounds);
   const hints = state.rounds.filter((r) => r.hint).length;
   return { total, hints };
 }
 
 function roundCell(r) {
-  return `${emojiFor(r.base || 0)} ${r.score || 0}${r.hint ? "💡" : ""}`;
+  return `${emojiFor(r.score || 0)} ${r.score || 0}${r.hint ? "💡" : ""}`;
 }
 
 function shareText() {
@@ -570,7 +570,7 @@ function openEnd() {
   $("end-grid").innerHTML = state.rounds.map((r) => `<span>${roundCell(r)}</span>`).join("");
   $("breakdown").innerHTML = state.rounds.map((r, i) => {
     const c = cities[i];
-    return `<li><span>${c.flag}</span><span><div class="bd-name">${escapeHtml(c.label)}</div><div class="bd-sub">${fmtKm(r.km)} · ${r.base} × ${fmtMult(r.mult).slice(1)}${r.hint ? " 💡" : ""}</div></span><span class="bd-pts">${r.score}</span></li>`;
+    return `<li><span>${c.flag}</span><span><div class="bd-name">${escapeHtml(c.label)}</div><div class="bd-sub">${fmtKm(r.km)}${r.hint ? " · hint 💡" : ""} · counts ${fmtMult(weightFor(i))}</div></span><span class="bd-pts">${r.score}</span></li>`;
   }).join("");
   $("countdown-ring").hidden = !isToday;
   openSheet("end-sheet");
@@ -638,7 +638,7 @@ function renderArchive() {
   $("archive-list").innerHTML = days.map((d) => {
     const s = store.get(gameKey(d));
     let st = "Play";
-    if (s && s.phase === "done") st = `${s.rounds.reduce((a, r) => a + (r.score || 0), 0)} pts`;
+    if (s && s.phase === "done") st = `${totalOf(s.rounds)} pts`;
     else if (s && s.rounds && s.rounds.some((r) => r.guess || r.hint)) st = "In progress";
     const href = d === today ? "./" : `?date=${d}`;
     return `<li><a href="${href}" class="${d === date ? "current" : ""}"><span>#${daily.puzzleNumber(d)} · ${fmtDate(d)}${d === today ? " (today)" : ""}</span><span class="st">${st}</span></a></li>`;
@@ -666,8 +666,6 @@ function wireUI() {
   $("btn-cancel").onclick = cancelGuess;
   $("btn-next").onclick = nextRound;
   $("btn-hint").onclick = () => {
-    const i = state.round;
-    $("hint-mult-note").textContent = `${fmtMult(baseMultiplier(i))} becomes ${fmtMult(multiplierFor(i, true))}`;
     openSheet("hint-sheet");
   };
   document.querySelectorAll("[data-hint]").forEach((b) => (b.onclick = () => chooseHint(b.dataset.hint)));

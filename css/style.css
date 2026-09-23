@@ -39,7 +39,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
     var(--bg);
 }
 .maplibregl-ctrl-attrib.maplibregl-ctrl { font-family: system-ui, sans-serif; font-size: 9px; line-height: 1.3; background: rgba(255,255,255,.55); border-radius: 6px 0 0 0; max-width: 100vw; }
-.maplibregl-ctrl-bottom-right { bottom: calc(var(--bottom-h, 90px) + var(--safe-bottom)); }
+/* Credits sit at the very bottom edge; the controls float just above them. */
+.maplibregl-ctrl-bottom-right { bottom: var(--safe-bottom); left: 0; right: 0; display: flex; justify-content: center; }
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib.maplibregl-ctrl { margin: 0; border-radius: 6px 6px 0 0; }
 
 /* ---------- Shimmer text ---------- */
 .shimmer {
@@ -119,7 +121,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* ---------- Bottom ---------- */
 .bottom {
   position: fixed; z-index: 4; left: 12px; right: 12px;
-  bottom: calc(12px + var(--safe-bottom));
+  bottom: calc(22px + var(--safe-bottom));
   max-width: 560px; margin: 0 auto;
   pointer-events: none;
 }
@@ -167,7 +169,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .ring circle { fill: none; stroke-width: 5; }
 .ring .ring-bg { stroke: rgba(43,40,64,.10); }
 .ring .ring-fg { stroke: url(#prismStroke); stroke-linecap: round; stroke-dasharray: 113.1; stroke-dashoffset: 113.1; transition: stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1); }
-.ring span { font-weight: 700; font-size: 14px; position: relative; }
+.ring span { font-weight: 700; font-size: 13px; position: relative; }
 .ring.big { width: 72px; height: 72px; }
 .ring.big span { font-size: 12px; }
 

@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
-  <link rel="stylesheet" href="vendor/maplibre-gl.css?v=5">
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css?v=6">
+  <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -40,7 +40,7 @@
     <div class="target-meta">
       <span id="round-label">1/6</span>
       <span id="day-label"></span>
-      <span id="mult-label">×1.0</span>
+      <span id="mult-label"></span>
     </div>
     <div class="target-name"><span class="flag" id="target-flag"></span><span id="target-text">Loading…</span></div>
     <div class="target-foot">
@@ -78,7 +78,7 @@
   <div class="sheet-backdrop" id="hint-sheet" hidden>
     <div class="card sheet">
       <h2>Pick one hint</h2>
-      <p class="muted">Using a hint halves this round's multiplier (<span id="hint-mult-note"></span>).</p>
+      <p class="muted">Using a hint halves this round's score, so the most you can get is 50.</p>
       <button class="option" data-hint="hemisphere"><b>Hemisphere</b><span>North or south, east or west</span></button>
       <button class="option" data-hint="continent"><b>Continent</b><span>Which continent the city is on</span></button>
       <button class="option" data-hint="probe"><b>Distance check</b><span>Tap one test spot and see how far it is from the city</span></button>
@@ -127,18 +127,18 @@
       <ul>
         <li><b>Drag</b> to spin the globe, <b>pinch or scroll</b> to zoom. Zoom stops at about the width of Florida.</li>
         <li><b>Tap</b> to drop a pin, then <b>Confirm</b>. Tap somewhere else first if you change your mind.</li>
-        <li>Rounds get harder as you go, from places most people know to places almost nobody can find. Later rounds pay more: ×1, ×1.25, ×1.5, ×1.75, ×2, then ×2.5 for the final boss round.</li>
-        <li>Each round scores up to <b>100</b> for proximity, times the multiplier. Perfect day: <b>1000</b>.</li>
-        <li>One optional <b>hint</b> per round: hemisphere, continent, or a distance check (tap a test spot, learn how many km it is from the city). A hint halves that round's multiplier.</li>
+        <li>Each round scores <b>0 to 100</b> based on how close you are.</li>
+        <li>Rounds get harder as you go, from big famous cities to places almost nobody can find, so later rounds count more toward your day total: ×1, ×1.25, ×1.5, ×1.75, ×2, then ×2.5 for the final boss round. Perfect day: <b>1000</b>.</li>
+        <li>One optional <b>hint</b> per round: hemisphere, continent, or a distance check (tap a test spot, learn how many km it is from the city). A hint halves that round's score.</li>
         <li>New puzzle every midnight Eastern time. Everyone gets the same six.</li>
       </ul>
-      <p class="muted small">Share colors (proximity before multipliers): 🎯 95+ &nbsp;🟩 80+ &nbsp;🟨 60+ &nbsp;🟧 40+ &nbsp;🟥 15+ &nbsp;⬛ under 15. 💡 marks a hint round.</p>
+      <p class="muted small">Share colors (round score): 🎯 95+ &nbsp;🟩 80+ &nbsp;🟨 60+ &nbsp;🟧 40+ &nbsp;🟥 15+ &nbsp;⬛ under 15. 💡 marks a hint round.</p>
       <p class="muted small">Imagery: Esri World Imagery. Places: GeoNames (CC BY 4.0).</p>
       <button class="btn prism wide" data-close>Let's go</button>
     </div>
   </div>
 
-  <script src="vendor/maplibre-gl.js?v=5"></script>
-  <script type="module" src="js/app.js?v=5"></script>
+  <script src="vendor/maplibre-gl.js?v=6"></script>
+  <script type="module" src="js/app.js?v=6"></script>
 </body>
 </html>
