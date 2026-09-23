@@ -23,14 +23,15 @@ export const CONFIG = {
 
   // ---- Globe --------------------------------------------------------------
   // Hard zoom cap expressed as ground distance per CSS pixel.
-  // 525 km across a 390 px wide phone (about the width of Florida) = 1.35 km/px.
-  MAX_KM_PER_PX: 525 / 390,
+  // The Florida peninsula (about 270 km across at Tampa) edge to edge on a
+  // 402 px wide iPhone 17 Pro = 0.67 km/px. Desktop gets the same detail per pixel.
+  MAX_KM_PER_PX: 270 / 402,
 
   IMAGERY: {
     // Esri World Imagery: no key, no labels, no borders.
     tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
     tileSize: 256,
-    maxzoom: 9,
+    maxzoom: 10,
     attribution:
       '<a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
   },

@@ -12,7 +12,7 @@ A daily geography game. Six places a day, one unlabeled satellite globe, tap whe
 6. Go to **Settings > Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main**, folder **/ (root)**, then **Save**.
 7. Wait a minute or two. Your game is live at `https://YOUR-USERNAME.github.io/xenotap/`.
 
-**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=9` with `?v=10`, and so on).
+**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=10` with `?v=11`, and so on).
 
 To update later: on the repo page click **Add file > Upload files**, drag in the new contents of the folder, and commit. Files with the same name are replaced. Pages redeploys on its own within a minute or two. (For a one-line tweak you can also open the file on GitHub, click the pencil icon, edit, and commit.)
 
@@ -49,7 +49,7 @@ Everything adjustable is in `js/config.js`.
 | `HINT_FACTOR` | 0.5 | A hint multiplies that round's score by this. |
 | `MIN_CITY_POP` | 10,000 | No answer is ever smaller than this. |
 | `ROUND_MIN_POP` | 1M, 250k, 50k, 10k, 10k, 10k | Per round, a city must be a capital, its country's biggest city, or at least this big. |
-| `MAX_KM_PER_PX` | 525/390 | Zoom cap (see below). |
+| `MAX_KM_PER_PX` | 270/402 | Zoom cap (see below). |
 | `LAUNCH_DATE` | 2026-09-23 | Puzzle #1 and the start of the archive. |
 | `EARLY_REGION_WEIGHT` | Africa 0.5, SE Asia 0.5 | Weight for those regions in the first `EARLY_ROUNDS` (4) rounds. |
 
@@ -78,7 +78,7 @@ Landing anywhere in the right country almost always scores well: most countries 
 
 **Imagery: Esri World Imagery.** No API key, no signup, no labels, no borders. Attribution shows along the bottom edge of the screen as Esri requires. If you ever want a fully open-licensed alternative, `config.js` has a commented-out Sentinel-2 cloudless option from EOX that you can swap in.
 
-**Zoom cap.** The limit is a ground resolution of 1.35 km per screen pixel, which is 525 km (about the width of Florida) across a 390 px wide phone. MapLibre's zoom scale changes with latitude, so the cap is recalculated from the latitude at the center of the view every time the globe moves. Measured result: 526 km across a phone at the equator, 30°, 45°, 60° and 75°. It is enforced as the map's hard `maxZoom`, so pinch, scroll wheel, keyboard and double tap cannot get past it. On a wider desktop screen you see more ground at max zoom, but the detail per pixel is the same.
+**Zoom cap.** The limit is a ground resolution of 0.67 km per screen pixel: the Florida peninsula (about 270 km across at Tampa's latitude) edge to edge on a 402 px wide iPhone 17 Pro. MapLibre's zoom scale changes with latitude, so the cap is recalculated from the latitude at the center of the view every time the globe moves. It is enforced as the map's hard `maxZoom`, so pinch, scroll wheel, keyboard and double tap cannot get past it. On a wider desktop screen you see more ground at max zoom, but the detail per pixel is the same.
 
 **Daily picks: harder as the day goes on.** Each round picks a country first, then a city inside it. Knowing the country is the main skill, and knowing the exact city earns the last few points. Every place has a difficulty tier from 1 to 5, judged from a typical American's point of view (set in `tools/build-data.mjs`):
 
@@ -120,7 +120,7 @@ Measured over a simulated year, each round uses 49 to 84 different countries, a 
 * Disputed or partially recognized places (Taiwan, Kosovo, Palestine, Western Sahara) show only their own name, with no sovereign listed.
 * City-states are not repeated: `Monaco`, not `Monaco, Monaco`.
 
-**Share text.** Each round shows a color and its 0 to 100 score, so it is easy to compare round by round with friends: 🎯 95+ · 🟩 80+ · 🟨 60+ · 🟧 40+ · 🟥 15+ · ⬛ under 15. 💡 marks a round where a hint was used. The last line is the weighted day total.
+**Share text.** Each round shows an emoji and its 0 to 100 score, so it is easy to compare round by round with friends: 🌟 100 · 🎯 95+ · 🔥 90+ · 🟩 80+ · 🟨 60+ · 🟧 40+ · 🟥 15+ · ⬛ under 15. 💡 marks a round where a hint was used. The last line is the weighted day total.
 
 ```
 XenoTap #23 · Sep 23, 2026

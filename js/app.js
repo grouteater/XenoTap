@@ -1,8 +1,8 @@
-import { CONFIG } from "./config.js?v=9";
-import * as daily from "./daily.js?v=9";
+import { CONFIG } from "./config.js?v=10";
+import * as daily from "./daily.js?v=10";
 
 const $ = (id) => document.getElementById(id);
-// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=9").
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=10").
 const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
 
@@ -56,7 +56,9 @@ function baseScore(km) {
 
 // Share colors follow the round score (0 to 100).
 function emojiFor(base) {
+  if (base >= 100) return "🌟";
   if (base >= 95) return "🎯";
+  if (base >= 90) return "🔥";
   if (base >= 80) return "🟩";
   if (base >= 60) return "🟨";
   if (base >= 40) return "🟧";
