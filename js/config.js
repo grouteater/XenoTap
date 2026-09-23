@@ -40,43 +40,35 @@ export const CONFIG = {
   // attribution: 'Sentinel-2 cloudless by <a href="https://s2maps.eu">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2016)'
 
   // ---- City selection (affects puzzles) -----------------------------------
-  // A country is drawn first, then a city inside it. Knowing the country is
-  // the main skill; the city is the bonus.
-  //
-  // Each country has a difficulty tier (1 = easy for Americans, 5 = obscure),
-  // set in tools/build-data.mjs. Each round draws from overlapping tiers with
-  // these weights, so no single small pool gets used up.
-  ROUND_TIERS: [
-    { 1: 1, 2: 0.35 },   // Warm-up (tier 2 only via its capital, see below)
-    { 1: 0.5, 2: 1 },    // Easy
-    { 2: 0.5, 3: 1 },    // Medium
-    { 3: 0.6, 4: 1 },    // Tricky
-    { 4: 1, 5: 0.6 },    // Hard
-    { 4: 0.5, 5: 1 },    // Boss
-  ],
-  // Every pick has at least this many people. Tiny capitals (Alofi, Funafuti,
-  // Vatican City) are never answers, and places with no town this big drop out.
-  MIN_CITY_POP: 10000,
-  // Per round, a city must be a national capital, its country's biggest city,
-  // or at least this big. Round 1 is Madrid / Toronto / Osaka territory.
-  ROUND_MIN_POP: [500000, 250000, 50000, 10000, 10000, 10000],
-  // In round 1, countries above tier 1 can only show a big capital (Vienna, Nairobi, Bogotá).
-  ROUND1_CAPITALS_ONLY_ABOVE_TIER: 1,
-  // How strongly each round favors big cities. city weight = min(pop, cap) ^ exponent.
-  // Early rounds lean toward well known cities, late rounds toward small ones.
-  ROUND_POP_EXPONENT: [0.5, 0.4, 0.35, 0.3, 0.25, 0.2],
+  // What each round draws from:
+  //   famous: hand-picked household names (tools/build-data.mjs FAMOUS list)
+  //   known:  places most players have heard of (KNOWN list + big capitals)
+  //   any:    every playable city, weighted toward harder countries
+  ROUND_POOLS: ["famous", "famous", "known", "known", "any", "any"],
+  AFRICA_FROM_ROUND: 5,             // African places only appear from this round on (1-based)
+  // Rounds with the "any" pool: country weight by difficulty tier (5 = hardest),
+  // and famous / known cities are made rarer so the Boss round stays a boss.
+  HARD_TIER_WEIGHT: { 1: 0.3, 2: 0.5, 3: 0.8, 4: 1, 5: 1 },
+  LATE_FAME_WEIGHT: { 2: 0.15, 1: 0.4 },
+  LATE_POP_EXPONENT: 0.2,           // city weight inside a country = min(pop, cap) ^ this
+  // Africa has far more small countries than any other region, so per-country
+  // weighting alone would make most late rounds African. This evens it out.
+  AFRICA_LATE_WEIGHT: 0.45,
+  // Rounds 1-4: how much a country's share grows with its number of listed cities
+  // (0 = every country equal, 1 = every city equal). 0.7 keeps the US common.
+  EARLY_COUNTRY_SPREAD: 0.7,
+  KNOWN_CAPITAL_MIN_POP: 300000,    // tier 1-2 capitals this big join the "known" pool
   CITY_POP_CAP: 3000000,
+  MIN_CITY_POP: 10000,              // no answer is ever smaller than this
   TERRITORY_WEIGHT: 0.3,            // dependent territories vs 1.0 for countries
-  // Softer regions early: in the first N rounds these get their weight multiplied.
-  EARLY_ROUNDS: 4,
-  EARLY_REGION_WEIGHT: { Africa: 0.5, "South-Eastern Asia": 0.5 },
   // (Island rules live in tools/build-data.mjs: only well known island nations
-  // are playable, most at 0.35 weight, and remote small-island cities are dropped.)
+  // are playable, and remote small-island cities are dropped.)
   MAX_PER_CONTINENT: 2,             // per day, keeps each day globally spread
   MIN_SPACING_KM: 1000,             // any two places on the same day are at least this far apart
   // Countries that share a land border never appear on the same day.
   COUNTRY_REPEAT_DAYS: 7,           // a country will not recur within this window
   RECENT_SOFT_DAYS: 30,             // ...and is less likely for this long after that
   RECENT_SOFT_WEIGHT: 0.3,
-  CITY_REPEAT_DAYS: 60,             // a city will not recur within this window
+  // A city will not recur within this many days (famous ones come back sooner).
+  CITY_REPEAT_DAYS: { famous: 21, known: 30, other: 60 },
 };

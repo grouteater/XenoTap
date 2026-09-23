@@ -12,7 +12,7 @@ A daily geography game. Six places a day, one unlabeled satellite globe, tap whe
 6. Go to **Settings > Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main**, folder **/ (root)**, then **Save**.
 7. Wait a minute or two. Your game is live at `https://YOUR-USERNAME.github.io/xenotap/`.
 
-**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=11` with `?v=12`, and so on).
+**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=12` with `?v=13`, and so on).
 
 To update later: on the repo page click **Add file > Upload files**, drag in the new contents of the folder, and commit. Files with the same name are replaced. Pages redeploys on its own within a minute or two. (For a one-line tweak you can also open the file on GitHub, click the pencil icon, edit, and commit.)
 
@@ -48,10 +48,11 @@ Everything adjustable is in `js/config.js`.
 | `ROUND_NAMES` | Warm-up ... Boss | Shown on the round card. |
 | `HINT_FACTOR` | 0.5 | A hint multiplies that round's score by this. |
 | `MIN_CITY_POP` | 10,000 | No answer is ever smaller than this. |
-| `ROUND_MIN_POP` | 1M, 250k, 50k, 10k, 10k, 10k | Per round, a city must be a capital, its country's biggest city, or at least this big. |
+| `ROUND_POOLS` | famous ×2, known ×2, any ×2 | Which city pool each round draws from (see below). |
 | `MAX_KM_PER_PX` | 270/402 | Zoom cap (see below). |
 | `LAUNCH_DATE` | 2026-09-23 | Puzzle #1 and the start of the archive. |
-| `EARLY_REGION_WEIGHT` | Africa 0.5, SE Asia 0.5 | Weight for those regions in the first `EARLY_ROUNDS` (4) rounds. |
+| `AFRICA_FROM_ROUND` | 5 | African places only appear from round 5 on. |
+| `AFRICA_LATE_WEIGHT` | 0.45 | Per-country weight for Africa in rounds 5-6 (see below). |
 
 **Scoring.** Every round is scored 0 to 100 for proximity, and that is the number players see and share. The day total weights later rounds more: total = round 1 × 1 + round 2 × 1.25 + ... + round 6 × 2.5, so six perfect rounds make 1000.
 
@@ -80,30 +81,27 @@ Landing anywhere in the right country almost always scores well: most countries 
 
 **Zoom cap.** The limit is a ground resolution of 0.67 km per screen pixel: the Florida peninsula (about 270 km across at Tampa's latitude) edge to edge on a 402 px wide iPhone 17 Pro. MapLibre's zoom scale changes with latitude, so the cap is recalculated from the latitude at the center of the view every time the globe moves. It is enforced as the map's hard `maxZoom`, so pinch, scroll wheel, keyboard and double tap cannot get past it. On a wider desktop screen you see more ground at max zoom, but the detail per pixel is the same.
 
-**Daily picks: harder as the day goes on.** Each round picks a country first, then a city inside it. Knowing the country is the main skill, and knowing the exact city earns the last few points. Every place has a difficulty tier from 1 to 5, judged from a typical American's point of view (set in `tools/build-data.mjs`):
+**Daily picks: harder as the day goes on.** Rounds draw from three pools of cities (set in `tools/build-data.mjs`):
 
-| Tier | Examples | Count |
+| Rounds | Pool | What is in it |
 |---|---|---|
-| 1 | Canada, Mexico, UK, Italy, Japan, Australia, Egypt | 32 |
-| 2 | Austria, Colombia, Kenya, Iran, Indonesia, Greenland | 49 |
-| 3 | Romania, Kazakhstan, Ghana, Honduras, Sri Lanka, Uzbekistan | 43 |
-| 4 | Armenia, Georgia, Belarus, Botswana, Moldova, DR Congo, Isle of Man | 22 |
-| 5 | Kyrgyzstan, Suriname, Bhutan, Laos, Papua New Guinea, Senegal, Chad | 28 |
+| 1-2 Warm-up, Easy | **Famous** (77 cities) | Popular US and Canadian cities, very well known European cities (London, Paris, Rome, Venice, Stockholm...), and a few household names elsewhere (Tokyo, Sydney, Mexico City, Dubai, Hong Kong). |
+| 3-4 Medium, Tricky | **Known** (about 175 cities) | Places most people have heard of: Oslo, Brussels, Istanbul, Athens, Buenos Aires, Bangkok, Lima, Reykjavík, plus mid-size US, Canadian and Australian cities, plus capitals of 300,000+ in well-known countries. |
+| 5-6 Hard, Boss | **Any** | Every playable city, weighted toward harder countries (difficulty tier 5 = 1.0 down to tier 1 = 0.3) and away from famous (×0.15) and known (×0.4) cities. |
 
-Each round draws from two overlapping tiers with different weights (`ROUND_TIERS`), so no round leans on one small pool:
+Africa only appears in rounds 5 and 6. Because Africa has far more small countries than any other region, equal per-country weighting would make about 60% of late rounds African, so African countries get 0.45 weight there: over a simulated year that is about 40% of round 5-6 picks. Every place also has a difficulty tier from 1 to 5 (from a typical American's point of view), used for weighting rounds 5-6 and the practice modes:
 
-| Round | Tiers (weight) | City rule |
-|---|---|---|
-| 1 Warm-up | 1 (1.0), 2 (0.35, capitals of 500k+ only) | capital, biggest city, or 500k+ |
-| 2 Easy | 1 (0.5), 2 (1.0) | capital, biggest city, or 250k+ |
-| 3 Medium | 2 (0.5), 3 (1.0) | 50k+ |
-| 4 Tricky | 3 (0.6), 4 (1.0) | 10k+ |
-| 5 Hard | 4 (1.0), 5 (0.6) | 10k+ |
-| 6 Boss | 4 (0.5), 5 (1.0) | 10k+ |
+| Tier | Examples |
+|---|---|
+| 1 | Canada, Mexico, UK, Italy, Japan, Australia, Egypt |
+| 2 | Austria, Colombia, Kenya, Iran, Indonesia, Greenland |
+| 3 | Romania, Kazakhstan, Ghana, Honduras, Sri Lanka, Uzbekistan |
+| 4 | Armenia, Georgia, Belarus, Botswana, Moldova, DR Congo |
+| 5 | Kyrgyzstan, Suriname, Bhutan, Laos, Brunei, Libya, Senegal, Chad |
 
-Nothing anywhere is under 10,000 people, which rules out tiny island capitals and places with no town that big (Niue, Tuvalu, Nauru, Palau, Vatican City, San Marino, Liechtenstein). Within those limits, early rounds lean toward bigger cities and late rounds toward smaller ones (`ROUND_POP_EXPONENT`). Dependent territories get 0.3 weight. In rounds 1 to 4, Africa and Southeast Asia get half weight, so the early rounds lean familiar. Each day has at most two places per continent, no two countries that share a land border, and no two places closer than 1,000 km (`MIN_SPACING_KM`). A country cannot return within 7 days and is less likely (0.3 weight) for 30 days after that; a city cannot return within 60 days.
+In rounds 1-4 a city is picked directly from the pool; a country's chance grows with its number of listed cities, but more slowly (count^0.7), so the US is the most common country without taking over. Nothing anywhere is under 10,000 people. Each day has no two countries that share a land border and no two places closer than 1,000 km (`MIN_SPACING_KM`); rounds 1-4 allow at most two places per continent. A country cannot return within 7 days and is less likely for 30 days after that. A city cannot return within 21 days (famous), 30 days (known) or 60 days (everything else).
 
-Measured over a simulated year, each round uses 49 to 84 different countries, a given country typically returns to the same round after 30 to 49 days, and the Warm-up round draws from 64 countries and 184 cities.
+To move a city between pools, edit the `FAMOUS` or `KNOWN` list in `tools/build-data.mjs` and rerun it.
 
 **Islands are rare and well known.** Two rules in `tools/build-data.mjs`:
 1. Island nations are only playable if they are on an allowlist of places most Americans know: Japan, UK, Ireland, Iceland, New Zealand, the Philippines and Indonesia at full weight; Cuba, Jamaica, Puerto Rico, the Bahamas, the Dominican Republic, Haiti, Madagascar, Sri Lanka, Taiwan, Cyprus, Malta, Singapore, the Isle of Man and Greenland at 0.35 weight. Every other island nation or territory (Tonga, Vanuatu, Comoros, Mauritius, Guadeloupe, Guernsey and so on) is out.
@@ -142,7 +140,9 @@ https://you.github.io/xenotap/
 
 **Add to Home Screen.** `manifest.webmanifest`, the icons in `icons/`, and the Apple meta tags make XenoTap open full screen with its own icon when added from Safari's Share menu.
 
-**Final results view.** After the last round, "View globe" shows each answer as a red pin labeled "Round 3: Tartu, Estonia". Labels stay the same size at any zoom; when two would overlap, the later round shrinks to a short "R3" tag, and zooming in brings the full label back.
+**Final results view.** After the last round, "View globe" shows each answer as a red pin labeled "Round 3: Tartu, Estonia", and the line from each guess fades from white (your guess) to red (the answer). Labels stay the same size at any zoom; when two would overlap, the later round shrinks to a short "R3" tag, and zooming in brings the full label back.
+
+**Look.** Plain and calm: soft lavender background, white cards outlined in the results-pin red, red primary buttons, and round bars colored by difficulty (green for the warm-up through dark red for the boss). No animated colors.
 
 **Answer marker.** During the rounds, the real location gets a red circle with big red arrows pointing at it, in the style of a YouTube clickbait thumbnail.
 

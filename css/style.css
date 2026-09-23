@@ -5,9 +5,12 @@
   --glass: rgba(246, 244, 252, 0.74);
   --glass-strong: rgba(248, 246, 253, 0.88);
   --line: rgba(43, 40, 64, 0.10);
-  --pink: #f4b6d2; --peach: #fbd3b0; --butter: #f5ebb0; --mint: #bfe8cf; --sky: #b9ddf2; --lilac: #cbc2f2;
-  --prism: linear-gradient(90deg, var(--pink), var(--peach), var(--butter), var(--mint), var(--sky), var(--lilac), var(--pink));
-  --prism-soft: linear-gradient(120deg, rgba(244,182,210,.35), rgba(185,221,242,.35), rgba(203,194,242,.35), rgba(245,235,176,.35));
+  --red: #ff2d2d;          /* same red as the result pins */
+  --red-dark: #d61f1f;
+  --mint: #bfe8cf;
+  --tint: #efedf5;         /* soft neutral panel */
+  /* Round difficulty colors: easy green to boss red */
+  --r1: #2fb562; --r2: #8cc63f; --r3: #e9b824; --r4: #f28c28; --r5: #e8553a; --r6: #b3202a;
   --shadow: 0 10px 30px rgba(50, 40, 90, 0.16), 0 1px 0 rgba(255,255,255,.7) inset;
   --radius: 20px;
   --body: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -32,27 +35,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* ---------- Globe ---------- */
 #map {
   position: fixed; inset: 0;
-  background:
-    radial-gradient(60% 45% at 50% 55%, rgba(203,194,242,.55), transparent 70%),
-    radial-gradient(40% 35% at 22% 28%, rgba(185,221,242,.55), transparent 70%),
-    radial-gradient(40% 35% at 80% 78%, rgba(244,182,210,.45), transparent 70%),
-    var(--bg);
+  background: var(--bg);
 }
 .maplibregl-ctrl-attrib.maplibregl-ctrl { font-family: system-ui, sans-serif; font-size: 9px; line-height: 1.3; background: rgba(255,255,255,.55); border-radius: 6px 0 0 0; max-width: 100vw; }
 /* Credits sit at the very bottom edge; the controls float just above them. */
 .maplibregl-ctrl-bottom-right { bottom: var(--safe-bottom); left: 0; right: 0; display: flex; justify-content: center; }
 .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib.maplibregl-ctrl { margin: 0; border-radius: 6px 6px 0 0; }
 
-/* ---------- Shimmer text ---------- */
-.shimmer {
-  background: linear-gradient(100deg, #2b2840 0%, #2b2840 30%, #d97aa8 40%, #6fb3d9 48%, #9a8ae0 56%, #d9b86a 62%, #2b2840 72%, #2b2840 100%);
-  background-size: 300% 100%;
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-  animation: shimmer 6s linear infinite;
-}
-@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -200% 0; } }
-@media (prefers-reduced-motion: reduce) { .shimmer { animation: none; background-position: 0 0; } }
+/* Plain title text (the old animated shimmer is gone) */
+.shimmer { color: var(--ink); }
 
 /* ---------- Cards ---------- */
 .card {
@@ -60,17 +51,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: var(--glass);
   backdrop-filter: blur(18px) saturate(1.5);
   -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  border: 1px solid rgba(255,255,255,.55);
+  border: 2px solid var(--red);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
 }
-.card::before {
-  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px;
-  background: var(--prism); background-size: 200% 100%;
-  animation: prism-slide 8s linear infinite;
-}
-@keyframes prism-slide { from { background-position: 0 0; } to { background-position: 200% 0; } }
 
 /* ---------- Top bar ---------- */
 .topbar {
@@ -78,6 +63,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex; align-items: center; justify-content: space-between;
   pointer-events: none; z-index: 5;
 }
+/* Title centered on the screen no matter how many buttons sit on each side */
+.topbar .logo { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: none; }
 .topbar > * { pointer-events: auto; }
 .logo {
   font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: .02em; margin: 0;
@@ -105,9 +92,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .target-name .flag { font-size: 1.15em; line-height: 1; flex: none; }
 .target-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .pips { display: flex; gap: 6px; }
-.pip { width: 22px; height: 6px; border-radius: 3px; background: rgba(43,40,64,.12); }
-.pip.done { background: var(--prism); background-size: 600% 100%; }
-.pip.current { background: rgba(43,40,64,.45); }
+/* Round bars colored by difficulty: faded until reached, solid once reached */
+.pip { width: 22px; height: 6px; border-radius: 3px; background: var(--c); opacity: .28; }
+.pip.done, .pip.current { opacity: 1; }
+.pip.current { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--c); }
 .chip {
   border: 1px solid var(--line); background: #f8f6fd; border-radius: 999px; padding: 7px 16px;
   font-weight: 700; font-size: 13px; letter-spacing: .02em;
@@ -115,7 +103,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .chip:disabled { opacity: .4; cursor: default; }
 .hint-result {
   margin-top: 10px; padding: 8px 12px; border-radius: 12px;
-  background: var(--prism-soft); font-size: 13px;
+  background: var(--tint); font-size: 13px;
 }
 
 /* ---------- Bottom ---------- */
@@ -132,8 +120,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: var(--glass-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   box-shadow: var(--shadow); font-size: 12px; pointer-events: none;
 }
-.helper.probe { background: #f8f6fd; outline: 2px solid transparent; animation: glow 2s ease-in-out infinite; }
-@keyframes glow { 50% { box-shadow: 0 0 0 4px rgba(185,221,242,.9), var(--shadow); } }
+.helper.probe { background: #f8f6fd; box-shadow: 0 0 0 2px var(--red), var(--shadow); }
 
 .btn {
   border: 0; border-radius: 16px; padding: 15px 20px; min-height: 52px;
@@ -143,14 +130,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .btn.wide { width: 100%; }
 .btn.ghost { background: var(--glass-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.8); }
 .btn.prism {
-  flex: 1; color: var(--ink);
-  background:
-    linear-gradient(rgba(255,255,255,.18), rgba(255,255,255,.18)),
-    var(--prism);
-  background-size: 100% 100%, 200% 100%;
-  animation: prism-slide 6s linear infinite;
-  border: 1px solid rgba(255,255,255,.9);
+  flex: 1; color: #fff; background: var(--red); border: 0;
 }
+.btn.prism:active { background: var(--red-dark); }
 #actions-confirm .btn.ghost { flex: 0 0 34%; }
 .btn:active { transform: translateY(1px) scale(.99); }
 
@@ -168,7 +150,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring circle { fill: none; stroke-width: 5; }
 .ring .ring-bg { stroke: rgba(43,40,64,.10); }
-.ring .ring-fg { stroke: url(#prismStroke); stroke-linecap: round; stroke-dasharray: 113.1; stroke-dashoffset: 113.1; transition: stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1); }
+.ring .ring-fg { stroke: var(--ring, var(--red)); stroke-linecap: round; stroke-dasharray: 113.1; stroke-dashoffset: 113.1; transition: stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1); }
 .ring span { font-weight: 700; font-size: 13px; position: relative; }
 .ring.big { width: 72px; height: 72px; }
 .ring.big span { font-size: 12px; }
@@ -278,7 +260,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .breakdown details { padding: 10px 0; }
 .breakdown summary { list-style: none; cursor: pointer; display: block; }
 .breakdown summary::-webkit-details-marker { display: none; }
-.bd-round { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); background: var(--prism-soft); padding: 2px 8px; border-radius: 999px; margin-bottom: 6px; }
+.bd-round { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); background: var(--c, var(--tint)); color: #fff; padding: 2px 8px; border-radius: 999px; margin-bottom: 6px; }
 .bd-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; }
 .bd-flag { font-size: 18px; }
 .bd-name { display: block; }
@@ -297,14 +279,14 @@ details[open] .bd-more::after { content: " ▴"; }
 .hist { display: grid; gap: 4px; margin-bottom: 6px; }
 .hist-row { display: grid; grid-template-columns: 40px 1fr; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-soft); }
 .hist-bar { background: rgba(43,40,64,.18); color: var(--ink); border-radius: 5px; font-size: 11px; font-weight: 700; padding: 1px 6px; text-align: right; min-height: 16px; }
-.hist-bar.mine { background: var(--prism); }
+.hist-bar.mine { background: var(--red); color: #fff; }
 
 /* ---------- v8: menu and practice modes ---------- */
 .menu { display: grid; gap: 8px; margin: 8px 0 4px; }
 .menu a { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 14px; background: #f8f6fd; border: 1px solid var(--line); color: inherit; text-decoration: none; }
 .menu a b { font-family: var(--display); font-size: 16px; }
 .menu a span { font-size: 13px; color: var(--ink-soft); }
-.menu a.current { outline: 2px solid #b6a6ec; }
+.menu a.current { outline: 2px solid var(--red); }
 .mode-text { font-size: 15px; line-height: 1.45; margin: 8px 0 12px; }
 .trail { font-size: 22px; letter-spacing: 2px; margin-top: 8px; word-break: break-all; }
 .stat-tiles.three { grid-template-columns: repeat(3, 1fr); }
@@ -330,5 +312,16 @@ body[data-mode="streak"] #pips, body[data-mode="hotcold"] #pips { display: none;
 .result-pin { z-index: 2; }
 .pin.red { width: 26px; height: 35px; }
 .result-label { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 7px;
-  background: rgba(255,255,255,.93); border-left: 3px solid #ff2d2d; }
+  background: rgba(255,255,255,.93); }
 .result-label.short { padding: 1px 5px; font-size: 10.5px; }
+
+/* ---------- v12: plain theme bits ---------- */
+.help { padding-bottom: 0; }
+.help ul { margin: 6px 0; line-height: 1.4; }
+.help li { margin-bottom: 4px; }
+.help p { margin: 6px 0; }
+.help .sticky-go { position: sticky; bottom: 0; margin: 8px -18px 0; padding: 10px 18px calc(12px + var(--safe-bottom));
+  background: linear-gradient(rgba(248,246,253,0), rgba(248,246,253,.95) 30%); }
+.help .sticky-go .btn { margin: 0; }
+.help details { margin: 4px 0 2px; font-size: 13px; }
+.help details summary { cursor: pointer; font-weight: 700; color: var(--ink-soft); }

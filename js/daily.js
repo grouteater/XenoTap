@@ -5,7 +5,7 @@
 // day from LAUNCH_DATE forward in memory, so "recently used" is itself
 // derived from the seed. Same date in = same cities out, on every device.
 
-import { CONFIG } from "./config.js?v=11";
+import { CONFIG } from "./config.js?v=12";
 
 // ---- Dates ------------------------------------------------------------------
 
@@ -69,21 +69,30 @@ function distKm(a, b) { // city rows: [name, ci, region, lat, lng, ...]
 
 let DATA = null;
 let citiesByCountry = null;
-let eligible = null; // eligible[round][countryIdx] = city indices allowed in that round
+let pools = null;   // pools[round] = { kind, byCountry: city idx arrays, flat: city idx array }
 const history = []; // history[n] = city indices for day n (0 = LAUNCH_DATE)
+
+const isAfrica = (k) => DATA.countries[k].continent === "Africa";
+const fameKey = (ci) => (DATA.cities[ci][7] === 2 ? "famous" : DATA.cities[ci][7] === 1 ? "known" : "other");
 
 export function initData(data) {
   DATA = data;
   citiesByCountry = data.countries.map(() => []);
   data.cities.forEach((c, i) => citiesByCountry[c[1]].push(i));
-  const biggest = citiesByCountry.map((list) => list.reduce((b, ci) => (data.cities[ci][5] > data.cities[b][5] ? ci : b), list[0]));
-  eligible = Array.from({ length: CONFIG.ROUNDS }, (_, round) => {
-    const minPop = CONFIG.ROUND_MIN_POP[round] ?? CONFIG.MIN_CITY_POP;
-    return citiesByCountry.map((list, k) => list.filter((ci) => {
-      const [, , , , , pop, isCap] = data.cities[ci];
-      if (round === 0 && data.countries[k].tier > CONFIG.ROUND1_CAPITALS_ONLY_ABOVE_TIER) return isCap && pop >= minPop;
-      return pop >= CONFIG.MIN_CITY_POP && (pop >= minPop || isCap || ci === biggest[k]);
-    }));
+  pools = CONFIG.ROUND_POOLS.map((kind, round) => {
+    const africaOk = round + 1 >= CONFIG.AFRICA_FROM_ROUND;
+    const byCountry = citiesByCountry.map((list, k) => {
+      if (!africaOk && isAfrica(k)) return [];
+      const tier = data.countries[k].tier;
+      return list.filter((ci) => {
+        const [, , , , , pop, isCap, fame] = data.cities[ci];
+        if (pop < CONFIG.MIN_CITY_POP) return false;
+        if (kind === "famous") return fame === 2;
+        if (kind === "known") return fame === 1 || (isCap && tier <= 2 && fame !== 2 && pop >= CONFIG.KNOWN_CAPITAL_MIN_POP);
+        return true;
+      });
+    });
+    return { kind, byCountry, flat: byCountry.flat() };
   });
   history.length = 0;
 }
@@ -95,13 +104,14 @@ function generateDay(n) {
   const recentCities = new Set();
   const recentCountries = new Set();   // hard block
   const softCountries = new Set();     // less likely
-  const lookback = Math.max(CONFIG.CITY_REPEAT_DAYS, CONFIG.COUNTRY_REPEAT_DAYS, CONFIG.RECENT_SOFT_DAYS);
+  const R = CONFIG.CITY_REPEAT_DAYS;
+  const lookback = Math.max(R.famous, R.known, R.other, CONFIG.COUNTRY_REPEAT_DAYS, CONFIG.RECENT_SOFT_DAYS);
   for (let back = 1; back <= lookback; back++) {
     const prev = history[n - back];
     if (!prev) continue;
     for (const ci of prev) {
       const k = DATA.cities[ci][1];
-      if (back <= CONFIG.CITY_REPEAT_DAYS) recentCities.add(ci);
+      if (back <= R[fameKey(ci)]) recentCities.add(ci);
       if (back <= CONFIG.COUNTRY_REPEAT_DAYS) recentCountries.add(k);
       else if (back <= CONFIG.RECENT_SOFT_DAYS) softCountries.add(k);
     }
@@ -119,50 +129,70 @@ function pickSix(rng, recentCities, recentCountries, softCountries) {
   const usedCountries = new Set();
   const blockedNeighbors = new Set(); // country codes bordering something already picked today
   const continentCount = {};
+  const farEnough = (ci) => picks.every((p) => distKm(DATA.cities[p], DATA.cities[ci]) >= CONFIG.MIN_SPACING_KM);
 
-  // Constraints are relaxed step by step only if a round's pool ever runs dry:
+  // Constraints relax step by step only if a round's pool runs dry:
   // 0 = everything, 1 = ignore continent spread, 2 = allow recent countries,
-  // 3 = also allow neighboring tiers, 4 = anything (last resort).
-  // Bordering countries and places closer than MIN_SPACING_KM are blocked at every level but 4.
+  // 3 = allow recently used cities, 4 = ignore neighbors and spacing too.
   for (let round = 0; round < CONFIG.ROUNDS; round++) {
-    const tierW = CONFIG.ROUND_TIERS[round] || { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 };
-    const tiers = Object.keys(tierW).map(Number);
-    const exponent = CONFIG.ROUND_POP_EXPONENT[round] ?? 0.3;
+    const pool = pools[round];
+    const countryOk = (k, level) => {
+      const c = DATA.countries[k];
+      if (usedCountries.has(k)) return false;
+      if (level < 4 && blockedNeighbors.has(c.cc)) return false;
+      if (level < 2 && recentCountries.has(k)) return false;
+      // Continent spread applies to rounds 1-4; late rounds are weighted instead (see below).
+      if (level < 1 && pool.kind !== "any" && (continentCount[c.continent] || 0) >= CONFIG.MAX_PER_CONTINENT) return false;
+      return true;
+    };
+    const cityOk = (ci, level) => (level >= 3 || !recentCities.has(ci)) && (level >= 4 || farEnough(ci));
+    const countryWeight = (k) => {
+      const c = DATA.countries[k];
+      let w = (c.weight ?? 1) * (c.kind === "territory" ? CONFIG.TERRITORY_WEIGHT : 1);
+      if (softCountries.has(k)) w *= CONFIG.RECENT_SOFT_WEIGHT;
+      return w;
+    };
+
     let chosen = null;
-    const rejected = new Set(); // countries with no city far enough from today's other picks
     for (let level = 0; level < 5 && chosen === null; level++) {
-      while (chosen === null) {
-        const candidates = [];
-        const weights = [];
-        DATA.countries.forEach((c, idx) => {
-          if (usedCountries.has(idx) || rejected.has(idx)) return;
-          if (level < 4 && blockedNeighbors.has(c.cc)) return;
-          if (level < 3 && !tiers.includes(c.tier)) return;
-          if (level === 3 && !tiers.some((t) => Math.abs(t - c.tier) <= 1)) return;
-          if (level < 2 && recentCountries.has(idx)) return;
-          if (level < 1 && (continentCount[c.continent] || 0) >= CONFIG.MAX_PER_CONTINENT) return;
-          if (!eligible[round][idx].some((ci) => !recentCities.has(ci))) return;
-          candidates.push(idx);
-          let w = (tierW[c.tier] ?? 0.3) * (c.weight ?? 1) * (c.kind === "territory" ? CONFIG.TERRITORY_WEIGHT : 1);
-          if (round < CONFIG.EARLY_ROUNDS) {
-            w *= CONFIG.EARLY_REGION_WEIGHT[c.continent] ?? CONFIG.EARLY_REGION_WEIGHT[c.subregion] ?? 1;
-          }
-          if (softCountries.has(idx)) w *= CONFIG.RECENT_SOFT_WEIGHT;
-          weights.push(w);
-        });
-        if (candidates.length === 0) break; // relax to the next level
-        const country = weightedPick(candidates, weights, rng);
-        const pool = eligible[round][country].filter((ci) =>
-          !recentCities.has(ci) && (level === 4 || picks.every((p) => distKm(DATA.cities[p], DATA.cities[ci]) >= CONFIG.MIN_SPACING_KM)));
-        if (pool.length === 0) { rejected.add(country); continue; }
-        chosen = weightedPick(pool, pool.map((ci) => Math.pow(Math.min(DATA.cities[ci][5], CONFIG.CITY_POP_CAP), exponent)), rng);
+      if (pool.kind !== "any") {
+        // City first: every famous / known city is a candidate. Countries with many
+        // listed cities (the US) come up more, but not in proportion to their count.
+        const cands = [], weights = [];
+        for (const ci of pool.flat) {
+          const k = DATA.cities[ci][1];
+          if (!countryOk(k, level) || !cityOk(ci, level)) continue;
+          cands.push(ci);
+          weights.push(countryWeight(k) * Math.pow(pool.byCountry[k].length, CONFIG.EARLY_COUNTRY_SPREAD - 1));
+        }
+        if (cands.length) chosen = weightedPick(cands, weights, rng);
+      } else {
+        // Country first, weighted toward harder countries, then a city inside it.
+        const rejected = new Set();
+        while (chosen === null) {
+          const cands = [], weights = [];
+          DATA.countries.forEach((c, k) => {
+            if (rejected.has(k) || !countryOk(k, level) || !pool.byCountry[k].length) return;
+            cands.push(k);
+            weights.push(countryWeight(k) * (CONFIG.HARD_TIER_WEIGHT[c.tier] ?? 1) *
+              (c.continent === "Africa" ? CONFIG.AFRICA_LATE_WEIGHT : 1) *
+              ((continentCount[c.continent] || 0) >= CONFIG.MAX_PER_CONTINENT ? 0.35 : 1));
+          });
+          if (!cands.length) break;
+          const k = weightedPick(cands, weights, rng);
+          const inside = pool.byCountry[k].filter((ci) => cityOk(ci, level));
+          if (!inside.length) { rejected.add(k); continue; }
+          chosen = weightedPick(inside, inside.map((ci) =>
+            Math.pow(Math.min(DATA.cities[ci][5], CONFIG.CITY_POP_CAP), CONFIG.LATE_POP_EXPONENT) *
+            (CONFIG.LATE_FAME_WEIGHT[DATA.cities[ci][7]] ?? 1)), rng);
+        }
       }
     }
     if (chosen === null) break; // cannot happen with the shipped dataset
     const cIdx = DATA.cities[chosen][1];
     picks.push(chosen);
     usedCountries.add(cIdx);
-    for (const n of DATA.countries[cIdx].neighbors || []) blockedNeighbors.add(n);
+    for (const nb of DATA.countries[cIdx].neighbors || []) blockedNeighbors.add(nb);
     const cont = DATA.countries[cIdx].continent;
     continentCount[cont] = (continentCount[cont] || 0) + 1;
   }

@@ -55,9 +55,9 @@ const REGION_NAMES = { US: US_STATES, CA: CA_PROV, AU: AU_STATES };
 const TIERS = {
   1: "US CA MX GB IE FR DE IT ES PT GR NL CH SE NO JP KR AU NZ EG ZA IL TR CU JM PR IS PH TH VN SA AR",
   2: "AT BE DK FI PL CZ HU UA HR BS DO HT CO PE CL VE EC CR PA KE MA NG ET AE IR IQ AF PK ID MY SG TW HK KP GL NP MN BO UY SY JO LB QA KW MC VA MT CY LU",
-  3: "RO BG RS SK SI BA AL ME LT LV EE KZ UZ LK BD MM KH TN DZ LY SD GH TZ UG RW SO CM ZW ZM MG GT HN NI SV BZ OM YE PS PY SM LI AD MO",
+  3: "RO BG RS SK SI BA AL ME LT LV EE KZ UZ LK BD MM KH TN DZ SD GH TZ UG RW SO CM ZW ZM MG GT HN NI SV BZ OM YE PS PY SM LI AD MO",
   4: "AM GE BY MK XK BW NA MD AZ SS ER DJ CD AO MZ MW LS SZ BI CI GI IM",
-  5: "KG TJ TM SR GY GF BN PG EH BT LA SN ML BF NE TD CF CG GA GQ GN GW SL LR GM TG BJ MR",
+  5: "KG TJ TM SR GY GF BN PG EH BT LA LY SN ML BF NE TD CF CG GA GQ GN GW SL LR GM TG BJ MR",
 };
 const TIER_OF = {};
 for (const [t, list] of Object.entries(TIERS)) for (const cc of list.split(" ")) TIER_OF[cc] = +t;
@@ -129,6 +129,46 @@ function isRemoteIslandCity(city, lands) {
   return gap > REMOTE_ISLAND_GAP_KM;
 }
 
+// ---- City fame (drives rounds 1 to 4) ----------------------------------------
+// FAMOUS: rounds 1-2. Popular US and Canadian cities, very well known European
+// cities, and a few extremely well known cities elsewhere.
+const FAMOUS = `
+US:New York City|US:Los Angeles|US:Chicago|US:Houston|US:Phoenix|US:Philadelphia|US:San Antonio|US:San Diego|US:Dallas
+US:San Francisco|US:Seattle|US:Denver|US:Boston|US:Miami|US:Atlanta|US:Las Vegas|US:Washington, D.C.|US:Nashville
+US:New Orleans|US:Detroit|US:Portland|US:Austin|US:Orlando|US:Minneapolis|US:Honolulu|US:Salt Lake City|US:Baltimore
+US:St. Louis|US:Pittsburgh|US:Tampa|US:Charlotte|US:Indianapolis|US:Kansas City|US:Memphis|US:Anchorage
+CA:Toronto|CA:Montréal|CA:Vancouver|CA:Calgary|CA:Ottawa|CA:Edmonton|CA:Québec|CA:Winnipeg
+GB:London|GB:Edinburgh|GB:Manchester|GB:Liverpool|FR:Paris|IT:Rome|IT:Venice|IT:Milan|IT:Florence|ES:Madrid|ES:Barcelona
+DE:Berlin|DE:Munich|NL:Amsterdam|AT:Vienna|CZ:Prague|IE:Dublin|PT:Lisbon|SE:Stockholm|DK:Copenhagen
+JP:Tokyo|JP:Kyoto|JP:Osaka|AU:Sydney|AU:Melbourne|MX:Mexico City|MX:Cancún|HK:Hong Kong|AE:Dubai|KR:Seoul|SG:Singapore
+CU:Havana|PR:San Juan|IL:Jerusalem`;
+// KNOWN: rounds 3-4. Places most players have heard of. National capitals of
+// tier 1-2 countries outside Africa are added automatically.
+const KNOWN = `
+NO:Oslo|NO:Bergen|BE:Brussels|BE:Antwerpen|TR:Istanbul|TR:Ankara|TR:İzmir|TR:Antalya|GR:Athens|GR:Thessaloníki|FI:Helsinki
+PL:Warsaw|PL:Kraków|HU:Budapest|CH:Zürich|CH:Genève|CH:Bern|FR:Lyon|FR:Marseille|FR:Nice|FR:Bordeaux|FR:Strasbourg
+IT:Naples|IT:Turin|IT:Bologna|IT:Verona|IT:Genoa|IT:Pisa|ES:Sevilla|ES:Valencia|ES:Málaga|ES:Granada|ES:Bilbao
+DE:Hamburg|DE:Frankfurt am Main|DE:Köln|DE:Stuttgart|DE:Düsseldorf|DE:Dresden|AT:Salzburg|AT:Innsbruck|NL:Rotterdam
+NL:The Hague|PT:Porto|GB:Glasgow|GB:Birmingham|GB:Belfast|GB:Cardiff|GB:Bristol|GB:Oxford|GB:Cambridge|GB:Leeds
+SE:Göteborg|IS:Reykjavík|EE:Tallinn|LV:Riga|LT:Vilnius|UA:Kyiv|UA:Odessa|RO:Bucharest|BG:Sofia|RS:Belgrade|HR:Zagreb
+HR:Split|HR:Dubrovnik|SI:Ljubljana|SK:Bratislava|BA:Sarajevo|MC:Monaco|LU:Luxembourg|BY:Minsk|CY:Nicosia
+TH:Bangkok|TH:Phuket|TH:Chiang Mai|VN:Hanoi|VN:Ho Chi Minh City|PH:Manila|MY:Kuala Lumpur|ID:Jakarta|ID:Denpasar
+TW:Taipei|KR:Busan|JP:Hiroshima|JP:Sapporo|JP:Yokohama|JP:Nagoya|JP:Kobe|JP:Nagasaki|AE:Abu Dhabi|QA:Doha|IL:Tel Aviv
+SA:Riyadh|SA:Mecca|SA:Jeddah|IR:Tehran|IQ:Baghdad|AF:Kabul|PK:Karachi|PK:Islamabad|PK:Lahore|NP:Kathmandu|LK:Colombo
+LB:Beirut|JO:Amman|SY:Damascus|KW:Kuwait City|OM:Muscat|MN:Ulan Bator|KP:Pyongyang
+AR:Buenos Aires|AR:Córdoba|PE:Lima|PE:Cusco|CO:Bogotá|CO:Medellín|CO:Cartagena|CL:Santiago|EC:Quito|VE:Caracas
+BO:La Paz|UY:Montevideo|CR:San José|DO:Santo Domingo|HT:Port-au-Prince|BS:Nassau|JM:Kingston|JM:Montego Bay
+GT:Guatemala City|MX:Guadalajara|MX:Monterrey|MX:Tijuana|MX:Acapulco de Juárez|MX:Puerto Vallarta|MX:Mérida
+US:Tucson|US:Albuquerque|US:El Paso|US:Oklahoma City|US:Louisville|US:Milwaukee|US:Cincinnati|US:Cleveland|US:Buffalo
+US:Raleigh|US:Richmond|US:Savannah|US:Charleston|US:Santa Fe|US:Reno|US:Boise|US:Omaha|US:Sacramento|US:San Jose
+US:Jacksonville|US:Columbus|US:Birmingham|US:Des Moines|US:Madison|US:Spokane|US:Tulsa
+CA:Victoria|CA:Halifax|CA:Saskatoon|CA:Regina|CA:St. John's|CA:Hamilton
+AU:Brisbane|AU:Perth|AU:Adelaide|AU:Canberra|AU:Hobart|AU:Darwin|AU:Gold Coast|NZ:Auckland|NZ:Wellington|NZ:Christchurch`;
+const parseList = (txt) => new Set(txt.replace(/\n/g, "|").split("|").map((x) => x.trim()).filter(Boolean));
+const FAMOUS_SET = parseList(FAMOUS);
+const KNOWN_SET = parseList(KNOWN);
+const matchedFame = new Set();
+
 const BAD_FEATURES = new Set(["PPLX", "PPLH", "PPLQ", "PPLW", "PPLCH", "PPLF", "PPLR"]);
 
 function continentOf(c) {
@@ -168,6 +208,20 @@ for (let [cc, list] of [...grouped.entries()].sort()) {
     .sort((a, b) => b.population - a.population)
     .slice(0, MAX_CITIES_PER_COUNTRY);
   for (const cap of list.filter(isCap)) if (!pool.includes(cap)) pool.push(cap);
+  // Famous / known cities are always in, even if they fall outside the top 80 (Venice).
+  // Duplicate names resolve to the most populous match (Portland OR, not Portland ME).
+  const fameOf = new Map();
+  for (const [set, level] of [[FAMOUS_SET, 2], [KNOWN_SET, 1]]) {
+    for (const key of set) {
+      const [kcc, name] = [key.slice(0, 2), key.slice(3)];
+      if (kcc !== cc) continue;
+      const best = list.filter((x) => x.name === name).sort((a, b) => b.population - a.population)[0];
+      if (!best) continue;
+      matchedFame.add(key);
+      if (!fameOf.has(best)) fameOf.set(best, level);
+      if (!pool.includes(best)) pool.push(best);
+    }
+  }
   if (pool.length === 0) pool = list.sort((a, b) => b.population - a.population).slice(0, 2);
   if (pool.length === 0) continue;
 
@@ -209,6 +263,7 @@ for (let [cc, list] of [...grouped.entries()].sort()) {
       +lng.toFixed(4),
       x.population,
       isCap(x) ? 1 : 0,
+      fameOf.get(x) || 0, // 2 = famous (rounds 1-2), 1 = known (rounds 3-4)
     ]);
   }
 }
@@ -217,6 +272,8 @@ for (let [cc, list] of [...grouped.entries()].sort()) {
 const names = {};
 for (const c of countries) names[c.cca2] = [c.name.common, c.flag || ""];
 
+const missing = [...FAMOUS_SET, ...KNOWN_SET].filter((k) => !matchedFame.has(k));
+if (missing.length) console.warn("fame list entries not found:", missing.join(", "));
 console.log("island nations dropped:", droppedIslands.join(" "));
 console.log("remote island cities dropped:", droppedCities.join(", "));
 const here = dirname(fileURLToPath(import.meta.url));
@@ -226,7 +283,7 @@ const out = {
   maxCitiesPerCountry: MAX_CITIES_PER_COUNTRY,
   countries: outCountries,
   names,
-  cities: outCities, // [name, countryIndex, stateOrProvince, lat, lng, population, isCapital]
+  cities: outCities, // [name, countryIndex, stateOrProvince, lat, lng, population, isCapital, fame]
 };
 writeFileSync(join(here, "..", "data", "places.json"), JSON.stringify(out));
 console.log(`countries: ${outCountries.length}  cities: ${outCities.length}`);

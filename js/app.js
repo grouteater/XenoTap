@@ -1,10 +1,12 @@
-import { CONFIG } from "./config.js?v=11";
-import * as daily from "./daily.js?v=11";
+import { CONFIG } from "./config.js?v=12";
+import * as daily from "./daily.js?v=12";
 
 const $ = (id) => document.getElementById(id);
-// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=11").
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=12").
 const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
+// Round difficulty colors, easy green to boss red (match --r1..--r6 in the CSS).
+const ROUND_COLORS = ["#2fb562", "#8cc63f", "#e9b824", "#f28c28", "#e8553a", "#b3202a"];
 
 // ---------------------------------------------------------------- geometry
 
@@ -234,8 +236,8 @@ function initMap() {
       layout: { "line-cap": "round", "line-join": "round" },
       paint: {
         "line-width": 3,
-        "line-gradient": ["interpolate", ["linear"], ["line-progress"],
-          0, "#f4b6d2", 0.25, "#fbd3b0", 0.5, "#f5ebb0", 0.75, "#b9ddf2", 1, "#cbc2f2"],
+        // White at your guess, red at the real city.
+        "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "#ffffff", 1, "#ff2d2d"],
       },
     });
     updateZoomCap();
@@ -557,7 +559,7 @@ function render(initial) {
   document.title = PRACTICE ? "XenoTap Practice" : `XenoTap #${daily.puzzleNumber(date)}`;
 
   $("pips").innerHTML = state.rounds.map((rr, k) =>
-    `<span class="pip ${rr.guess ? "done" : k === i ? "current" : ""}" style="${rr.guess ? `background-position:${k * 20}% 0` : ""}"></span>`).join("");
+    `<span class="pip ${rr.guess ? "done" : k === i ? "current" : ""}" style="--c:${ROUND_COLORS[k]}"></span>`).join("");
 
   const hintBtn = $("btn-hint");
   hintBtn.disabled = !!r.hint || state.phase !== "guess";
@@ -606,6 +608,7 @@ function showResult(r, i) {
   });
   $("result-calc").textContent = (r.hint ? `${r.base}, halved by hint · ` : "") + `counts ${fmtMult(weightFor(i))} in your total`;
   $("result-base").textContent = fmtMult(weightFor(i));
+  $("result-ring").style.setProperty("--ring", ROUND_COLORS[i]);
   $("result-points").textContent = r.score;
   setRing($("result-ring"), 0);
   requestAnimationFrame(() => requestAnimationFrame(() => setRing($("result-ring"), r.score / 100)));
@@ -686,7 +689,7 @@ function renderBreakdown() {
     const where = r.landed === c.cc ? "right country ✓" : landedText(r, i).replace("You guessed ", "guessed ").replace("🌊 Your guess landed in open water", "guessed open water 🌊");
     return `<li><details>
       <summary>
-        <span class="bd-round">Round ${i + 1} · ${CONFIG.ROUND_NAMES[i] || ""}</span>
+        <span class="bd-round" style="--c:${ROUND_COLORS[i]}">Round ${i + 1} · ${CONFIG.ROUND_NAMES[i] || ""}</span>
         <span class="bd-row">
           <span class="bd-flag">${c.flag}</span>
           <span><span class="bd-name">${escapeHtml(c.label)}</span>
