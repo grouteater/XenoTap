@@ -1,8 +1,8 @@
-import { CONFIG } from "./config.js?v=12";
-import * as daily from "./daily.js?v=12";
+import { CONFIG } from "./config.js?v=13";
+import * as daily from "./daily.js?v=13";
 
 const $ = (id) => document.getElementById(id);
-// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=12").
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=13").
 const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
 // Round difficulty colors, easy green to boss red (match --r1..--r6 in the CSS).
