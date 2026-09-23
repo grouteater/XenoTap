@@ -9,7 +9,7 @@
 // archive days. Do it before launch, or accept that history reshuffles.
 
 import { createRequire } from "module";
-import { writeFileSync } from "fs";
+import { writeFileSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -54,13 +54,80 @@ const REGION_NAMES = { US: US_STATES, CA: CA_PROV, AU: AU_STATES };
 // Rounds get harder as the day goes on (see ROUND_TIERS in js/config.js).
 const TIERS = {
   1: "US CA MX GB IE FR DE IT ES PT GR NL CH SE NO JP KR AU NZ EG ZA IL TR CU JM PR IS PH TH VN SA AR",
-  2: "AT BE DK FI PL CZ HU UA HR BS DO HT CO PE CL VE EC CR PA KE MA NG ET AE IR IQ AF PK ID MY SG TW HK KP GL NP MN BO UY SY JO LB QA KW GU MC VA MT CY LU",
-  3: "RO BG RS SK SI BA AL ME MK XK LT LV EE BY GE AM KZ UZ LK BD MM KH LA TN DZ LY SD GH TZ UG RW SO CM ZW ZM MG NA BW GT HN NI SV BZ TT BB OM YE BH FJ PS AW KY BM VI BT MV PY SM LI AD MO PF",
-  4: "MD AZ KG TJ TM SS ER DJ CD AO MZ MW LS SZ BI SR GY GF LC VC GD DM AG KN BN TL PG SB VU WS TO NC RE MU SC CV EH FO IM JE GG GI AX SX CW BQ MQ GP MP AS FK TC VG BL MF CI",
-  5: "SN ML BF NE TD CF CG GA GQ GN GW SL LR GM TG BJ MR KM ST YT SH KI TV NR PW MH FM WF NU CK PM AI MS",
+  2: "AT BE DK FI PL CZ HU UA HR BS DO HT CO PE CL VE EC CR PA KE MA NG ET AE IR IQ AF PK ID MY SG TW HK KP GL NP MN BO UY SY JO LB QA KW MC VA MT CY LU",
+  3: "RO BG RS SK SI BA AL ME LT LV EE KZ UZ LK BD MM KH TN DZ LY SD GH TZ UG RW SO CM ZW ZM MG GT HN NI SV BZ OM YE PS PY SM LI AD MO",
+  4: "AM GE BY MK XK BW NA MD AZ SS ER DJ CD AO MZ MW LS SZ BI CI GI IM",
+  5: "KG TJ TM SR GY GF BN PG EH BT LA SN ML BF NE TD CF CG GA GQ GN GW SL LR GM TG BJ MR",
 };
 const TIER_OF = {};
 for (const [t, list] of Object.entries(TIERS)) for (const cc of list.split(" ")) TIER_OF[cc] = +t;
+
+// ---- Islands ---------------------------------------------------------------
+// Island nations (no land border, plus Hispaniola and Timor) are only playable
+// if they are on this list. The number is their pick weight: big, famous ones
+// play like any country, the rest are kept rare.
+const ISLAND_NATIONS_ALLOWED = {
+  JP: 1, GB: 1, IE: 1, IS: 1, NZ: 1, PH: 1, ID: 1,
+  CU: 0.35, JM: 0.35, PR: 0.35, BS: 0.35, DO: 0.35, HT: 0.35, MG: 0.35, LK: 0.35,
+  TW: 0.35, CY: 0.35, MT: 0.35, SG: 0.35, IM: 0.35, GL: 0.35,
+};
+const ISLAND_SHARED_LAND = ["DO", "HT", "TL", "GB", "IE", "MF", "SX"]; // islands that do have a land border
+// Cities on a small island (< REMOTE_ISLAND_KM2) that is more than
+// REMOTE_ISLAND_GAP_KM from the country's main landmass are dropped
+// (Canaries, Madeira, Crete, Mallorca, Okinawa, Jeju...). Exceptions by name:
+const REMOTE_ISLAND_KM2 = 25000;
+const REMOTE_ISLAND_GAP_KM = 150;
+const REMOTE_ISLAND_KEEP = ["US:Honolulu"];
+
+const geoDir = join(dirname(require.resolve("world-countries/package.json")), "data");
+const RAD = Math.PI / 180;
+function ringAreaKm2(r) {
+  let a = 0;
+  for (let i = 0; i < r.length - 1; i++) a += (r[i + 1][0] - r[i][0]) * RAD * (2 + Math.sin(r[i][1] * RAD) + Math.sin(r[i + 1][1] * RAD));
+  return Math.abs((a * 6371 * 6371) / 2);
+}
+function inRing(p, r) {
+  let c = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const [xi, yi] = r[i], [xj, yj] = r[j];
+    if ((yi > p[1]) !== (yj > p[1]) && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+function km(a, b) {
+  const h = Math.sin(((b[1] - a[1]) * RAD) / 2) ** 2 + Math.cos(a[1] * RAD) * Math.cos(b[1] * RAD) * Math.sin(((b[0] - a[0]) * RAD) / 2) ** 2;
+  return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+function landmasses(cca3) {
+  const gj = JSON.parse(readFileSync(join(geoDir, cca3.toLowerCase() + ".geo.json"), "utf8"));
+  const out = [];
+  for (const f of gj.features) {
+    const g = f.geometry;
+    if (!g) continue;
+    for (const poly of g.type === "Polygon" ? [g.coordinates] : g.coordinates) out.push({ ring: poly[0], area: ringAreaKm2(poly[0]) });
+  }
+  return out.sort((a, b) => b.area - a.area);
+}
+function isRemoteIslandCity(city, lands) {
+  if (lands.length < 2) return false;
+  const pt = city.loc.coordinates;
+  let home = lands.find((l) => inRing(pt, l.ring));
+  if (!home) { // coastal points can fall just outside a simplified outline
+    let best = Infinity;
+    for (const l of lands) for (let i = 0; i < l.ring.length; i += 4) {
+      const d = (l.ring[i][0] - pt[0]) ** 2 + (l.ring[i][1] - pt[1]) ** 2;
+      if (d < best) { best = d; home = l; }
+    }
+  }
+  if (home === lands[0] || home.area >= REMOTE_ISLAND_KM2) return false;
+  // Distance to the nearest big landmass of the same country (Bali sits next to Java).
+  let gap = Infinity;
+  for (const l of lands) {
+    if (l !== lands[0] && l.area < REMOTE_ISLAND_KM2) continue;
+    for (let i = 0; i < l.ring.length; i += 2) gap = Math.min(gap, km(pt, l.ring[i]));
+  }
+  return gap > REMOTE_ISLAND_GAP_KM;
+}
 
 const BAD_FEATURES = new Set(["PPLX", "PPLH", "PPLQ", "PPLW", "PPLCH", "PPLF", "PPLR"]);
 
@@ -80,10 +147,20 @@ for (const c of cities) {
   grouped.get(c.country).push(c);
 }
 
-for (const [cc, list] of [...grouped.entries()].sort()) {
+const droppedIslands = [];
+const droppedCities = [];
+for (let [cc, list] of [...grouped.entries()].sort()) {
   const meta = byCC.get(cc);
   if (!meta || EXCLUDED_COUNTRIES.includes(cc) || SKIP.includes(cc)) continue;
   if (meta.region === "Antarctic") continue;
+
+  const islandNation = cc !== "AU" && ((meta.borders || []).length === 0 || ISLAND_SHARED_LAND.includes(cc));
+  if (islandNation && !(cc in ISLAND_NATIONS_ALLOWED)) { droppedIslands.push(cc); continue; }
+  const lands = landmasses(meta.cca3);
+  const keepCity = (x) => REMOTE_ISLAND_KEEP.includes(cc + ":" + x.name) || !isRemoteIslandCity(x, lands);
+  const before = list.length;
+  list = list.filter(keepCity);
+  if (list.length < before) droppedCities.push(`${cc} -${before - list.length}`);
 
   const isCap = (x) => x.featureCode === "PPLC";
   let pool = list
@@ -107,6 +184,16 @@ for (const [cc, list] of [...grouped.entries()].sort()) {
     sovereign: territory ? SOVEREIGN[cc] : null,
     kind: territory ? "territory" : disputed ? "disputed" : "sovereign",
     tier: TIER_OF[cc] || (console.warn("No tier for", cc), 4),
+    subregion: meta.subregion,
+    weight: islandNation ? ISLAND_NATIONS_ALLOWED[cc] : 1,
+    facts: {
+      capital: (meta.capital || [])[0] || null,
+      languages: Object.values(meta.languages || {}),
+      currencies: Object.values(meta.currencies || {}).map((c) => c.name),
+      area: Math.round(meta.area || 0),
+      demonym: meta.demonyms?.eng?.m || null,
+      landlocked: !!meta.landlocked,
+    },
     // Land neighbors (ISO alpha-2). Two neighbors never appear on the same day.
     neighbors: (meta.borders || []).map((c3) => countries.find((x) => x.cca3 === c3)?.cca2).filter(Boolean),
   });
@@ -126,12 +213,19 @@ for (const [cc, list] of [...grouped.entries()].sort()) {
   }
 }
 
+// Names and flags for every country on Earth, used to say where a guess landed.
+const names = {};
+for (const c of countries) names[c.cca2] = [c.name.common, c.flag || ""];
+
+console.log("island nations dropped:", droppedIslands.join(" "));
+console.log("remote island cities dropped:", droppedCities.join(", "));
 const here = dirname(fileURLToPath(import.meta.url));
 const out = {
   source: "GeoNames (CC BY 4.0) via all-the-cities; country metadata from mledoze/countries (ODbL)",
   populationFloor: POPULATION_FLOOR,
   maxCitiesPerCountry: MAX_CITIES_PER_COUNTRY,
   countries: outCountries,
+  names,
   cities: outCities, // [name, countryIndex, stateOrProvince, lat, lng, population, isCapital]
 };
 writeFileSync(join(here, "..", "data", "places.json"), JSON.stringify(out));

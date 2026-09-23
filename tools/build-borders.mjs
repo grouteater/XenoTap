@@ -19,11 +19,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 const places = JSON.parse(readFileSync(join(here, "..", "data", "places.json"), "utf8"));
 const srcDir = join(dirname(require.resolve("world-countries/package.json")), "data");
 
+// Every country on Earth (not just playable ones), so the game can say where any guess landed.
 const features = [];
-for (const c of places.countries) {
-  const meta = countries.find((x) => x.cca2 === c.cc);
-  const gj = JSON.parse(readFileSync(join(srcDir, meta.cca3.toLowerCase() + ".geo.json"), "utf8"));
-  for (const f of gj.features) features.push({ type: "Feature", properties: { cc: c.cc }, geometry: f.geometry });
+for (const meta of countries) {
+  let gj;
+  try { gj = JSON.parse(readFileSync(join(srcDir, meta.cca3.toLowerCase() + ".geo.json"), "utf8")); } catch { continue; }
+  for (const f of gj.features) if (f.geometry) features.push({ type: "Feature", properties: { cc: meta.cca2 }, geometry: f.geometry });
 }
 
 const tmpIn = join(tmpdir(), "xenotap-borders-in.json");
@@ -35,6 +36,6 @@ execFileSync(process.execPath, [mapshaper, tmpIn, "-simplify", "dp", "interval=2
 
 const simplified = JSON.parse(readFileSync(tmpOut, "utf8"));
 const byCC = {};
-for (const f of simplified.features) (byCC[f.properties.cc] ||= []).push({ type: "Feature", properties: {}, geometry: f.geometry });
+for (const f of simplified.features) if (f.geometry) (byCC[f.properties.cc] ||= []).push({ type: "Feature", properties: {}, geometry: f.geometry });
 writeFileSync(join(here, "..", "data", "borders.json"), JSON.stringify(byCC));
 console.log(`wrote ${Object.keys(byCC).length} outlines`);

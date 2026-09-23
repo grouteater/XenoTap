@@ -5,7 +5,7 @@
 // day from LAUNCH_DATE forward in memory, so "recently used" is itself
 // derived from the seed. Same date in = same cities out, on every device.
 
-import { CONFIG } from "./config.js?v=6";
+import { CONFIG } from "./config.js?v=8";
 
 // ---- Dates ------------------------------------------------------------------
 
@@ -81,6 +81,7 @@ export function initData(data) {
     const minPop = CONFIG.ROUND_MIN_POP[round] ?? CONFIG.MIN_CITY_POP;
     return citiesByCountry.map((list, k) => list.filter((ci) => {
       const [, , , , , pop, isCap] = data.cities[ci];
+      if (round === 0 && data.countries[k].tier > CONFIG.ROUND1_CAPITALS_ONLY_ABOVE_TIER) return isCap && pop >= minPop;
       return pop >= CONFIG.MIN_CITY_POP && (pop >= minPop || isCap || ci === biggest[k]);
     }));
   });
@@ -92,16 +93,28 @@ function generateDay(n) {
   const rng = mulberry32(hashString(CONFIG.SEED_SALT + ":" + date));
 
   const recentCities = new Set();
-  const recentCountries = new Set();
-  for (let back = 1; back <= Math.max(CONFIG.CITY_REPEAT_DAYS, CONFIG.COUNTRY_REPEAT_DAYS); back++) {
+  const recentCountries = new Set();   // hard block
+  const softCountries = new Set();     // less likely
+  const lookback = Math.max(CONFIG.CITY_REPEAT_DAYS, CONFIG.COUNTRY_REPEAT_DAYS, CONFIG.RECENT_SOFT_DAYS);
+  for (let back = 1; back <= lookback; back++) {
     const prev = history[n - back];
     if (!prev) continue;
     for (const ci of prev) {
+      const k = DATA.cities[ci][1];
       if (back <= CONFIG.CITY_REPEAT_DAYS) recentCities.add(ci);
-      if (back <= CONFIG.COUNTRY_REPEAT_DAYS) recentCountries.add(DATA.cities[ci][1]);
+      if (back <= CONFIG.COUNTRY_REPEAT_DAYS) recentCountries.add(k);
+      else if (back <= CONFIG.RECENT_SOFT_DAYS) softCountries.add(k);
     }
   }
+  return pickSix(rng, recentCities, recentCountries, softCountries);
+}
 
+// Unlimited practice games: same rules as the daily, fresh random seed, no history.
+export function randomPuzzle(seed) {
+  return pickSix(mulberry32(seed >>> 0), new Set(), new Set(), new Set());
+}
+
+function pickSix(rng, recentCities, recentCountries, softCountries) {
   const picks = [];
   const usedCountries = new Set();
   const blockedNeighbors = new Set(); // country codes bordering something already picked today
@@ -112,7 +125,8 @@ function generateDay(n) {
   // 3 = also allow neighboring tiers, 4 = anything (last resort).
   // Bordering countries and places closer than MIN_SPACING_KM are blocked at every level but 4.
   for (let round = 0; round < CONFIG.ROUNDS; round++) {
-    const tiers = CONFIG.ROUND_TIERS[round] || [1, 2, 3, 4, 5];
+    const tierW = CONFIG.ROUND_TIERS[round] || { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 };
+    const tiers = Object.keys(tierW).map(Number);
     const exponent = CONFIG.ROUND_POP_EXPONENT[round] ?? 0.3;
     let chosen = null;
     const rejected = new Set(); // countries with no city far enough from today's other picks
@@ -129,7 +143,12 @@ function generateDay(n) {
           if (level < 1 && (continentCount[c.continent] || 0) >= CONFIG.MAX_PER_CONTINENT) return;
           if (!eligible[round][idx].some((ci) => !recentCities.has(ci))) return;
           candidates.push(idx);
-          weights.push(c.kind === "territory" ? CONFIG.TERRITORY_WEIGHT : 1);
+          let w = (tierW[c.tier] ?? 0.3) * (c.weight ?? 1) * (c.kind === "territory" ? CONFIG.TERRITORY_WEIGHT : 1);
+          if (round < CONFIG.EARLY_ROUNDS) {
+            w *= CONFIG.EARLY_REGION_WEIGHT[c.continent] ?? CONFIG.EARLY_REGION_WEIGHT[c.subregion] ?? 1;
+          }
+          if (softCountries.has(idx)) w *= CONFIG.RECENT_SOFT_WEIGHT;
+          weights.push(w);
         });
         if (candidates.length === 0) break; // relax to the next level
         const country = weightedPick(candidates, weights, rng);
@@ -172,5 +191,6 @@ export function describeCity(ci) {
     index: ci, name, region, lat, lng, population: pop, isCapital: !!isCap,
     flag: country.flag, country: country.name, cc: country.cc,
     continent: country.continent, label: parts.join(", "),
+    facts: country.facts, neighbors: country.neighbors, sovereign: country.sovereign,
   };
 }

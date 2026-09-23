@@ -12,7 +12,7 @@ A daily geography game. Six places a day, one unlabeled satellite globe, tap whe
 6. Go to **Settings > Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main**, folder **/ (root)**, then **Save**.
 7. Wait a minute or two. Your game is live at `https://YOUR-USERNAME.github.io/xenotap/`.
 
-**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=6` with `?v=7`, and so on).
+**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=8` with `?v=9`, and so on).
 
 To update later: on the repo page click **Add file > Upload files**, drag in the new contents of the folder, and commit. Files with the same name are replaced. Pages redeploys on its own within a minute or two. (For a one-line tweak you can also open the file on GitHub, click the pencil icon, edit, and commit.)
 
@@ -21,6 +21,18 @@ To update later: on the repo page click **Add file > Upload files**, drag in the
 * New puzzle at midnight Eastern time. Everyone gets the same six, whatever their timezone.
 * Archive: the menu button (top right), or add `?date=2026-09-15` to the URL. Earliest day is `LAUNCH_DATE`.
 * Progress saves in the browser per day, so refreshing or coming back later resumes the same game, and archive games never overwrite today's.
+
+## Modes
+
+Open the menu (☰, top right):
+
+* **Daily puzzle:** the main game. Six places, same for everyone, new at midnight Eastern. Counts toward stats and streaks.
+* **Archive:** any past daily puzzle.
+* **Practice** (`?mode=practice`): the daily format with fresh random places, unlimited. Uses the exact same selection rules, never touches stats, and "New practice game" deals another.
+* **Country Streak** (`?mode=streak`): a country's name and flag appear; tap inside it and confirm. One miss ends the run. Easy countries dominate early and harder ones ramp in as the streak grows (full ramp by 25). For territories (Puerto Rico, Greenland, French Guiana...) tapping the country that owns it also counts. Tiny countries (under 20,000 km²) get 30 km of slack, since they are only a few pixels wide at the zoom cap. Includes Brazil, India, China and Russia. Saves best streak, runs and average.
+* **Hot & Cold** (`?mode=hotcold`): a mystery country. Every tap reports the distance from your tap to its nearest border and a temperature (🥶 Freezing over 6,000 km, 🧊 Cold, 🌥️ Cool, ☀️ Warm, 🌶️ Hot, 🔥 Burning under 250 km), plus warmer or colder than your last tap. Earlier taps stay on the globe as colored dots. Tap inside it to win. Countries under 1,000 km² sit this mode out. Saves games, wins, average taps and best.
+
+Each mode has its own stats (tap the stats button while in that mode). None of them affect the daily stats.
 
 ## Tuning
 
@@ -36,7 +48,8 @@ Everything adjustable is in `js/config.js`.
 | `MIN_CITY_POP` | 10,000 | No answer is ever smaller than this. |
 | `ROUND_MIN_POP` | 1M, 250k, 50k, 10k, 10k, 10k | Per round, a city must be a capital, its country's biggest city, or at least this big. |
 | `MAX_KM_PER_PX` | 525/390 | Zoom cap (see below). |
-| `LAUNCH_DATE` | 2026-09-01 | Puzzle #1 and the start of the archive. |
+| `LAUNCH_DATE` | 2026-09-23 | Puzzle #1 and the start of the archive. |
+| `EARLY_REGION_WEIGHT` | Africa 0.5, SE Asia 0.5 | Weight for those regions in the first `EARLY_ROUNDS` (4) rounds. |
 
 **Scoring.** Every round is scored 0 to 100 for proximity, and that is the number players see and share. The day total weights later rounds more: total = round 1 × 1 + round 2 × 1.25 + ... + round 6 × 2.5, so six perfect rounds make 1000.
 
@@ -70,16 +83,33 @@ Landing anywhere in the right country almost always scores well: most countries 
 | Tier | Examples | Count |
 |---|---|---|
 | 1 | Canada, Mexico, UK, Italy, Japan, Australia, Egypt | 32 |
-| 2 | Austria, Colombia, Kenya, Iran, Indonesia, Greenland | 50 |
-| 3 | Romania, Kazakhstan, Ghana, Honduras, Bhutan, Fiji | 62 |
-| 4 | Moldova, Kyrgyzstan, DR Congo, Suriname, Vanuatu, Guernsey | 56 |
-| 5 | Senegal, Mali, Chad, Gabon, Comoros, Tuvalu, Wallis and Futuna | 33 |
+| 2 | Austria, Colombia, Kenya, Iran, Indonesia, Greenland | 49 |
+| 3 | Romania, Kazakhstan, Ghana, Honduras, Sri Lanka, Uzbekistan | 43 |
+| 4 | Armenia, Georgia, Belarus, Botswana, Moldova, DR Congo, Isle of Man | 22 |
+| 5 | Kyrgyzstan, Suriname, Bhutan, Laos, Papua New Guinea, Senegal, Chad | 28 |
 
-Rounds 1 to 6 draw from tiers 1, 2, 3, 3 or 4, 4, then 5 (`ROUND_TIERS` in `config.js`). City size scales too: round 1 is always a capital, a country's biggest city, or a city of 1 million or more, so it lands on places like London, Rome, Madrid, Havana or Cape Town. Round 2 needs 250,000, round 3 needs 50,000, and nothing anywhere is under 10,000 people. That rules out tiny island capitals like Alofi (Niue) and Funafuti (Tuvalu), and places with no town that big (Niue, Tuvalu, Nauru, Palau, Vatican City, San Marino, Liechtenstein and some small Caribbean territories) never come up. Within those limits, early rounds lean toward bigger cities and late rounds toward smaller ones (`ROUND_POP_EXPONENT`). Dependent territories get 0.3 weight so tiny islands do not crowd out real countries. Each day has at most two places per continent, no two countries that share a land border, and no two places closer than 1,000 km (`MIN_SPACING_KM`). The same country will not come back within 14 days, and the same city will not come back within 60.
+Each round draws from two overlapping tiers with different weights (`ROUND_TIERS`), so no round leans on one small pool:
+
+| Round | Tiers (weight) | City rule |
+|---|---|---|
+| 1 Warm-up | 1 (1.0), 2 (0.35, capitals of 500k+ only) | capital, biggest city, or 500k+ |
+| 2 Easy | 1 (0.5), 2 (1.0) | capital, biggest city, or 250k+ |
+| 3 Medium | 2 (0.5), 3 (1.0) | 50k+ |
+| 4 Tricky | 3 (0.6), 4 (1.0) | 10k+ |
+| 5 Hard | 4 (1.0), 5 (0.6) | 10k+ |
+| 6 Boss | 4 (0.5), 5 (1.0) | 10k+ |
+
+Nothing anywhere is under 10,000 people, which rules out tiny island capitals and places with no town that big (Niue, Tuvalu, Nauru, Palau, Vatican City, San Marino, Liechtenstein). Within those limits, early rounds lean toward bigger cities and late rounds toward smaller ones (`ROUND_POP_EXPONENT`). Dependent territories get 0.3 weight. In rounds 1 to 4, Africa and Southeast Asia get half weight, so the early rounds lean familiar. Each day has at most two places per continent, no two countries that share a land border, and no two places closer than 1,000 km (`MIN_SPACING_KM`). A country cannot return within 7 days and is less likely (0.3 weight) for 30 days after that; a city cannot return within 60 days.
+
+Measured over a simulated year, each round uses 49 to 84 different countries, a given country typically returns to the same round after 30 to 49 days, and the Warm-up round draws from 64 countries and 184 cities.
+
+**Islands are rare and well known.** Two rules in `tools/build-data.mjs`:
+1. Island nations are only playable if they are on an allowlist of places most Americans know: Japan, UK, Ireland, Iceland, New Zealand, the Philippines and Indonesia at full weight; Cuba, Jamaica, Puerto Rico, the Bahamas, the Dominican Republic, Haiti, Madagascar, Sri Lanka, Taiwan, Cyprus, Malta, Singapore, the Isle of Man and Greenland at 0.35 weight. Every other island nation or territory (Tonga, Vanuatu, Comoros, Mauritius, Guadeloupe, Guernsey and so on) is out.
+2. Inside any country, cities on a small island (under 25,000 km²) more than 150 km from that country's big landmasses are dropped: the Canaries, Madeira, Crete, Mallorca, Sardinia, Okinawa and most of the central Philippines. Near-shore islands stay (Sicily, Bali, Zanzibar, Brooklyn, Istanbul), and Honolulu is kept by name.
 
 **Deterministic, with no history file.** The date string (Eastern time) is hashed into a seed for a small seeded random generator (mulberry32). To avoid repeats without storing anything, the game replays every day from `LAUNCH_DATE` up to the requested day in memory, which takes a fraction of a second even years out. That means any date, past or present, always produces the same six places on every device, and nothing can fall out of sync.
 
-**City pool.** GeoNames data (CC BY 4.0), rebuilt by `tools/build-data.mjs`: cities of at least 15,000 people, the 80 largest per country, plus every national capital regardless of size. Brazil, India, China and Russia are excluded. That comes to 7,079 places in 233 countries and territories.
+**City pool.** GeoNames data (CC BY 4.0), rebuilt by `tools/build-data.mjs`: cities of at least 15,000 people, the 80 largest per country, plus every national capital regardless of size. Brazil, India, China and Russia are excluded. After the island rules, that comes to 6,925 places in 174 countries and territories.
 
 **How names are shown:**
 * Countries: `City, Country` (e.g. Arlon, Belgium)
@@ -101,6 +131,14 @@ https://you.github.io/xenotap/
 **Hints.** One per round, and each one halves that round's score (so 50 is the most a hinted round can earn): hemisphere (north or south, east or west), continent, or a distance check. For the distance check you tap one test spot and it tells you exactly how many km that spot is from the city.
 
 **Country outlines.** When a round is revealed, the answer country's border is drawn on the globe, and the result card says "Right country" if your guess landed inside it. The final "View globe" screen outlines all six countries. Outlines come from mledoze/countries, simplified to about 2 km detail (finer than the zoom cap can show), stored in `data/borders.json` and fetched in the background after the globe loads.
+
+**Where your guess landed.** The reveal says "Right country" or names the country you actually tapped ("You guessed 🇩🇿 Algeria", or open water). This uses outlines for every country on Earth, including ones that are never answers.
+
+**Results screen.** Every round is labeled ("Round 3 · Medium") so you can line your results up with a friend's share text. Tapping a round opens a country facts card: capital, languages, currency, size compared to a US state ("a bit bigger than Maryland"), land borders, and what people are called. Facts come from mledoze/countries. Current leaders are deliberately left out because they go stale.
+
+**Stats and streaks.** Games played, average, best, current streak and best streak, plus a score histogram with today's bar highlighted. Streaks count days finished on the day itself (archive games count toward the other stats but not streaks). Stats are saved under a fixed key (`xenotap:stats`) that never changes between releases, so updating the site never wipes them. On iPhone, Safari and the Home Screen app keep separate storage, so pick one.
+
+**Add to Home Screen.** `manifest.webmanifest`, the icons in `icons/`, and the Apple meta tags make XenoTap open full screen with its own icon when added from Safari's Share menu.
 
 **Answer marker.** The real location gets a red circle with big red arrows pointing at it, in the style of a YouTube clickbait thumbnail.
 

@@ -6,13 +6,20 @@
   <title>XenoTap</title>
   <meta name="description" content="A daily geography game. Six cities, one satellite globe, no labels.">
   <meta name="theme-color" content="#d8d4e4">
+  <!-- Add to Home Screen -->
+  <link rel="manifest" href="manifest.webmanifest?v=8">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="XenoTap">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23f4b6d2'/><stop offset='.35' stop-color='%23b9ddf2'/><stop offset='.7' stop-color='%23cbc2f2'/><stop offset='1' stop-color='%23f5ebb0'/></linearGradient></defs><circle cx='50' cy='50' r='44' fill='url(%23g)'/><circle cx='50' cy='50' r='12' fill='%23d8d4e4'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
-  <link rel="stylesheet" href="vendor/maplibre-gl.css?v=6">
-  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css?v=8">
+  <link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -33,7 +40,10 @@
   <header class="topbar">
     <button class="icon-btn" id="btn-help" aria-label="How to play">?</button>
     <h1 class="logo shimmer">XenoTap</h1>
-    <button class="icon-btn" id="btn-archive" aria-label="Archive">&#9783;</button>
+    <span class="topbar-right">
+      <button class="icon-btn" id="btn-stats" aria-label="Stats"><svg viewBox="0 0 20 20" width="18" height="18"><rect x="3" y="10" width="3.2" height="7" rx="1" fill="currentColor"/><rect x="8.4" y="5" width="3.2" height="12" rx="1" fill="currentColor"/><rect x="13.8" y="8" width="3.2" height="9" rx="1" fill="currentColor"/></svg></button>
+      <button class="icon-btn" id="btn-archive" aria-label="Menu">&#9776;</button>
+    </span>
   </header>
 
   <section class="card target-card" id="target-card" aria-live="polite">
@@ -66,6 +76,7 @@
         <div class="ring" id="result-ring"><svg viewBox="0 0 44 44"><circle class="ring-bg" cx="22" cy="22" r="18"/><circle class="ring-fg" cx="22" cy="22" r="18"/></svg><span id="result-base">0</span></div>
         <div class="result-text">
           <div class="result-dist" id="result-dist"></div>
+          <div class="result-where" id="result-where"></div>
           <div class="result-calc" id="result-calc"></div>
         </div>
         <div class="result-points"><span id="result-points">0</span><small>pts</small></div>
@@ -97,12 +108,59 @@
         <div class="ring big" id="countdown-ring" title="Next puzzle"><svg viewBox="0 0 44 44"><circle class="ring-bg" cx="22" cy="22" r="18"/><circle class="ring-fg" cx="22" cy="22" r="18"/></svg><span id="countdown">--:--</span></div>
       </div>
       <div class="share-grid" id="end-grid"></div>
-      <ol class="breakdown" id="breakdown"></ol>
       <div class="end-actions">
         <button class="btn prism" id="btn-copy">Copy results</button>
         <button class="btn ghost" id="btn-view-globe">View globe</button>
       </div>
+      <h3 class="section-title">Rounds <small>tap one for country facts</small></h3>
+      <ol class="breakdown" id="breakdown"></ol>
+      <div id="end-stats-wrap">
+        <h3 class="section-title">Your stats</h3>
+        <div id="end-stats"></div>
+      </div>
       <button class="link-btn" id="btn-end-archive">Play past days</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="sheet-backdrop" id="stats-sheet" hidden>
+    <div class="card sheet">
+      <h2 id="stats-title">Your stats</h2>
+      <div id="stats-body"></div>
+      <p class="muted small">Streaks count days you finished on the day itself. Stats live in this browser, and the Home Screen app keeps its own.</p>
+      <button class="btn ghost wide" data-close>Close</button>
+    </div>
+  </div>
+
+  <!-- Menu -->
+  <div class="sheet-backdrop" id="menu-sheet" hidden>
+    <div class="card sheet">
+      <h2>Play</h2>
+      <nav class="menu">
+        <a href="./" data-mode-link="daily"><b>📅 Daily puzzle</b><span>Six places, same for everyone, new at midnight Eastern</span></a>
+        <a href="#" id="menu-archive"><b>🗂️ Archive</b><span>Play any past daily puzzle</span></a>
+        <a href="?mode=practice" data-mode-link="practice"><b>🎯 Practice</b><span>Unlimited daily-style games. Not counted in your stats</span></a>
+        <a href="?mode=streak" data-mode-link="streak"><b>🔥 Country Streak</b><span>Tap inside each country. One miss ends the run</span></a>
+        <a href="?mode=hotcold" data-mode-link="hotcold"><b>🌡️ Hot &amp; Cold</b><span>Find the mystery country by taking readings</span></a>
+        <a href="#" id="menu-help"><b>❔ How to play</b><span>Rules, scoring and tips</span></a>
+      </nav>
+      <button class="btn ghost wide" data-close>Close</button>
+    </div>
+  </div>
+
+  <!-- Practice mode results (Country Streak, Hot & Cold) -->
+  <div class="sheet-backdrop" id="mode-sheet" hidden>
+    <div class="card sheet end">
+      <div class="muted" id="mode-kicker"></div>
+      <div class="end-total"><span class="shimmer" id="mode-big"></span><small id="mode-small"></small></div>
+      <p id="mode-text" class="mode-text"></p>
+      <div class="end-actions">
+        <button class="btn prism" id="mode-again">Play again</button>
+        <button class="btn ghost" id="mode-copy">Copy</button>
+      </div>
+      <h3 class="section-title">Your stats</h3>
+      <div id="mode-stats"></div>
+      <a class="link-btn" href="./">Back to the daily puzzle</a>
     </div>
   </div>
 
@@ -132,13 +190,20 @@
         <li>One optional <b>hint</b> per round: hemisphere, continent, or a distance check (tap a test spot, learn how many km it is from the city). A hint halves that round's score.</li>
         <li>New puzzle every midnight Eastern time. Everyone gets the same six.</li>
       </ul>
+      <p><b>More ways to play</b> (menu, top right):</p>
+      <ul>
+        <li><b>Practice:</b> the daily format with fresh places, as often as you like. Doesn't count toward stats.</li>
+        <li><b>Country Streak:</b> tap inside each country shown. One miss ends it. For territories like Puerto Rico, tapping the country that owns it counts too.</li>
+        <li><b>Hot &amp; Cold:</b> each tap tells you how far you are from the mystery country's nearest border, from 🥶 freezing to 🔥 burning. Tap inside it to win.</li>
+      </ul>
       <p class="muted small">Share colors (round score): 🎯 95+ &nbsp;🟩 80+ &nbsp;🟨 60+ &nbsp;🟧 40+ &nbsp;🟥 15+ &nbsp;⬛ under 15. 💡 marks a hint round.</p>
+      <p class="muted small"><b>Play it like an app:</b> on iPhone tap Share, then <b>Add to Home Screen</b>.</p>
       <p class="muted small">Imagery: Esri World Imagery. Places: GeoNames (CC BY 4.0).</p>
       <button class="btn prism wide" data-close>Let's go</button>
     </div>
   </div>
 
-  <script src="vendor/maplibre-gl.js?v=6"></script>
-  <script type="module" src="js/app.js?v=6"></script>
+  <script src="vendor/maplibre-gl.js?v=8"></script>
+  <script type="module" src="js/app.js?v=8"></script>
 </body>
 </html>
