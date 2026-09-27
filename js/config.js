@@ -27,17 +27,33 @@ export const CONFIG = {
   // 402 px wide iPhone 17 Pro = 0.67 km/px. Desktop gets the same detail per pixel.
   MAX_KM_PER_PX: 270 / 402,
 
+  // Two satellite layers; the 🛰️ button in the top bar swaps between them and
+  // each player's choice is remembered. DEFAULT_IMAGERY is what new players see.
+  DEFAULT_IMAGERY: "sentinel",
   IMAGERY: {
-    // Esri World Imagery: no key, no labels, no borders.
-    tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
-    tileSize: 256,
-    maxzoom: 10,
-    attribution:
-      '<a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
+    // EOxCloudless (Sentinel-2, 2025 mosaic): one even, cloud-free color grade
+    // worldwide, so city grey stands out. Free for non-commercial use
+    // (CC BY-NC-SA 4.0) with this credit visible on the map.
+    sentinel: {
+      name: "Sentinel-2",
+      blurb: "even colors, cities stand out",
+      tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2025_3857/default/g/{z}/{y}/{x}.jpg"],
+      tileSize: 256,
+      maxzoom: 13,
+      attribution:
+        '<a href="https://cloudless.eox.at" target="_blank" rel="noopener">EOxCloudless</a> by <a href="https://eox.at" target="_blank" rel="noopener">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2025)',
+    },
+    // Esri World Imagery: no key, sharper up close, patchier colors.
+    esri: {
+      name: "Esri",
+      blurb: "sharper detail, patchier colors",
+      tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      tileSize: 256,
+      maxzoom: 10,
+      attribution:
+        '<a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
+    },
   },
-  // Alternative with a fully open license (Sentinel-2 cloudless 2016, CC BY 4.0):
-  // tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg"],
-  // attribution: 'Sentinel-2 cloudless by <a href="https://s2maps.eu">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2016)'
 
   // ---- City selection (affects puzzles) -----------------------------------
   // What each round draws from:

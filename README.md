@@ -12,7 +12,7 @@ A daily geography game. Six places a day, one unlabeled satellite globe, tap whe
 6. Go to **Settings > Pages**. Under "Build and deployment", set Source to **Deploy from a branch**, Branch to **main**, folder **/ (root)**, then **Save**.
 7. Wait a minute or two. Your game is live at `https://YOUR-USERNAME.github.io/xenotap/`.
 
-**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=17` with `?v=18`, and so on).
+**Version stamps.** Every file the page loads carries a `?v=` number (in `index.html`, the two `import` lines at the top of `js/app.js`, the one in `js/daily.js`, and the `places.json` fetch). iPhone Safari caches scripts aggressively, and without the stamp it can pair a new page with an old script. If you edit a file by hand, bump every `?v=` number (find and replace `?v=18` with `?v=19`, and so on).
 
 To update later: on the repo page click **Add file > Upload files**, drag in the new contents of the folder, and commit. Files with the same name are replaced. Pages redeploys on its own within a minute or two. (For a one-line tweak you can also open the file on GitHub, click the pencil icon, edit, and commit.)
 
@@ -83,7 +83,12 @@ Landing anywhere in the right country almost always scores well: most countries 
 
 **Globe: MapLibre GL JS 5 in globe projection.** It is free, open source, and fast on phones because it streams ordinary map tiles instead of a full 3D terrain engine like CesiumJS (heavier download, slower on mobile). It also has reliable screen-to-lat/lng conversion and a built-in "tap vs drag" distinction, so dragging to spin never drops a pin. The library is copied into `vendor/`, so the site does not depend on a CDN.
 
-**Imagery: Esri World Imagery.** No API key, no signup, no labels, no borders. Attribution shows along the bottom edge of the screen as Esri requires. If you ever want a fully open-licensed alternative, `config.js` has a commented-out Sentinel-2 cloudless option from EOX that you can swap in.
+**Imagery: two options, swapped with the 🛰️ button.** Both are keyless, with no labels and no borders, and each player's pick is remembered in their browser.
+
+- **Sentinel-2 (default):** EOxCloudless 2025 by EOX, the same kind of cloud-free Sentinel-2 mosaic MapTap uses. One even color grade worldwide, so the grey of cities stands out at the zoomed-out views the game uses. Free for non-commercial use under CC BY-NC-SA 4.0; the credit line on the map is required. If XenoTap ever makes money, it needs a commercial license from EOX or should drop this layer.
+- **Esri World Imagery:** sharper when zoomed in, but stitched from many sources, so colors are patchier.
+
+To change what new players see first, set `DEFAULT_IMAGERY` in `js/config.js` to `"sentinel"` or `"esri"`. The credit line at the bottom always matches the layer being shown.
 
 **Zoom cap.** The limit is a ground resolution of 0.67 km per screen pixel: the Florida peninsula (about 270 km across at Tampa's latitude) edge to edge on a 402 px wide iPhone 17 Pro. MapLibre's zoom scale changes with latitude, so the cap is recalculated from the latitude at the center of the view every time the globe moves. It is enforced as the map's hard `maxZoom`, so pinch, scroll wheel, keyboard and double tap cannot get past it. On a wider desktop screen you see more ground at max zoom, but the detail per pixel is the same.
 
@@ -170,4 +175,4 @@ node build-borders.mjs
 
 ## Credits
 
-Map engine: MapLibre GL JS (BSD-3). Imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community. Places: GeoNames (CC BY 4.0). Country metadata: mledoze/countries (ODbL). Font: Outfit (Google Fonts).
+Map engine: MapLibre GL JS (BSD-3). Imagery: EOxCloudless by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2025, CC BY-NC-SA 4.0), and Esri, Maxar, Earthstar Geographics, and the GIS User Community. Places: GeoNames (CC BY 4.0). Country metadata: mledoze/countries (ODbL). Font: Outfit (Google Fonts).

@@ -252,7 +252,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 
 /* ---------- v7: guess country, round facts, stats ---------- */
-.topbar-right { display: flex; gap: 8px; }
+.topbar-right, .topbar-left { display: flex; gap: 8px; }
+#btn-imagery { font-size: 18px; }
 .result-where { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-top: 2px; min-height: 0; }
 .result-where:empty { display: none; }
 .badge { margin-left: 0; }

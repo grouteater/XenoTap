@@ -1,8 +1,8 @@
-import { CONFIG } from "./config.js?v=17";
-import * as daily from "./daily.js?v=17";
+import { CONFIG } from "./config.js?v=18";
+import * as daily from "./daily.js?v=18";
 
 const $ = (id) => document.getElementById(id);
-// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=17").
+// Cache-busting stamp, inherited from how index.html loaded this file (e.g. "?v=18").
 const V = new URL(import.meta.url).search;
 const R = CONFIG.ROUNDS;
 // Round difficulty colors, easy green to boss red (match --r1..--r6 in the CSS).
@@ -166,17 +166,37 @@ function initialZoom() {
   return Math.max(0, Math.min(2.4, Math.log2(m / 190)));
 }
 
+const IMAGERY_KEY = "xenotap:imagery";
+function currentImagery() {
+  const k = store.get(IMAGERY_KEY);
+  return CONFIG.IMAGERY[k] ? k : (CONFIG.IMAGERY[CONFIG.DEFAULT_IMAGERY] ? CONFIG.DEFAULT_IMAGERY : Object.keys(CONFIG.IMAGERY)[0]);
+}
+function setImagery(key) {
+  for (const k of Object.keys(CONFIG.IMAGERY)) map.setLayoutProperty(`sat-${k}`, "visibility", k === key ? "visible" : "none");
+  store.set(IMAGERY_KEY, key);
+  $("btn-imagery").setAttribute("aria-label", `Imagery: ${CONFIG.IMAGERY[key].name}. Tap to switch.`);
+}
+function cycleImagery() {
+  const keys = Object.keys(CONFIG.IMAGERY);
+  const next = keys[(keys.indexOf(currentImagery()) + 1) % keys.length];
+  setImagery(next);
+  toast(`🛰️ ${CONFIG.IMAGERY[next].name}: ${CONFIG.IMAGERY[next].blurb}`);
+}
+
 function initMap() {
-  const img = CONFIG.IMAGERY;
+  const imgKey = currentImagery();
+  const sources = {}, layers = [];
+  for (const [k, img] of Object.entries(CONFIG.IMAGERY)) {
+    sources[`sat-${k}`] = { type: "raster", tiles: img.tiles, tileSize: img.tileSize, maxzoom: img.maxzoom, attribution: img.attribution };
+    layers.push({ id: `sat-${k}`, type: "raster", source: `sat-${k}`, layout: { visibility: k === imgKey ? "visible" : "none" }, paint: { "raster-fade-duration": 150 } });
+  }
   map = new maplibregl.Map({
     container: "map",
     style: {
       version: 8,
       projection: { type: "globe" },
-      sources: {
-        sat: { type: "raster", tiles: img.tiles, tileSize: img.tileSize, maxzoom: img.maxzoom, attribution: img.attribution },
-      },
-      layers: [{ id: "sat", type: "raster", source: "sat", paint: { "raster-fade-duration": 150 } }],
+      sources,
+      layers,
       sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 4, 0.6, 6, 0.2] },
     },
     center: [15, 18],
@@ -998,6 +1018,7 @@ function wireUI() {
   document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = closeSheets));
   document.querySelectorAll(".sheet-backdrop").forEach((bd) => bd.addEventListener("click", (e) => { if (e.target === bd) closeSheets(); }));
   $("btn-help").onclick = () => openSheet("help-sheet");
+  $("btn-imagery").onclick = cycleImagery;
   $("btn-stats").onclick = () => {
     if (controller) { $("stats-title").textContent = controller.title + " stats"; $("stats-body").innerHTML = controller.statsHtml(); }
     else { $("stats-title").textContent = "Your stats"; renderStats($("stats-body")); }
